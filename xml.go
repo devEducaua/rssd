@@ -16,8 +16,12 @@ type XmlAtomFeed struct {
 type XmlAtomEntry struct {
     Id string `xml:"id"`
     Title string `xml:"title"`
-    Published string `xml:"published"`
+    Updated string `xml:"updated"`
     Content string `xml:"content"`
+}
+
+type XmlRss struct {
+	Channel XmlRssFeed `xml:"channel"`
 }
 
 type XmlRssFeed struct {
@@ -34,22 +38,8 @@ type XmlRssItem struct {
     Description string `xml:"description"`
 }
 
-type Feed struct {
-    Id string
-    Title string
-    Description string
-    Items []Item
-}
-
-type Item struct {
-    Id string
-    Title string
-    Published string
-    Content string
-}
-
 func rssToGeneral(xmlFile string) Feed {
-    var rss XmlRssFeed;
+    var rss XmlRss;
 
     err := xml.Unmarshal([]byte(xmlFile), &rss);
     if err != nil {
@@ -58,19 +48,19 @@ func rssToGeneral(xmlFile string) Feed {
     }
 
     var items []Item;
-    for _, e := range rss.Items {
+    for _, e := range rss.Channel.Items {
         items = append(items, Item{
-            Id:        e.Id,
+            Url:        e.Id,
             Title:     e.Title,
-            Published: e.PubDate,
+            Updated: e.PubDate,
             Content:   e.Description,
         })
     }
 
     feed := Feed{
-        Id: rss.Id,
-        Title: rss.Title,
-        Description: rss.Description,
+        Url: rss.Channel.Id,
+        Title: rss.Channel.Title,
+        Description: rss.Channel.Description,
         Items: items,
     }
 
@@ -88,14 +78,14 @@ func atomToGeneral(xmlFile string) (Feed, error) {
 
     for _, e := range atom.Entries {
         items = append(items, Item{
-            Id:        e.Id,
+            Url:        e.Id,
             Title:     e.Title,
-            Published: e.Published,
+            Updated: e.Updated,
             Content:   e.Content,
         })
     }
     feed := Feed{
-        Id: atom.Id,
+        Url: atom.Id,
         Title: atom.Title,
         Description: atom.Subtitle,
         Items: items,
