@@ -4,51 +4,61 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+	// "os"
 )
 
-var	feedsMap = make(map[string]string);
+type Feed struct {
+    Url string
+    Title string
+    Description string
+    Items []Item
+}
+
+type Item struct {
+    Url string
+    Title string
+    Updated string
+    Content string
+}
 
 func main() {
-	argv := os.Args[1:];
-
-	if len(argv) == 0 {
-		os.Exit(1);
-	}
-
-	switch argv[0] {
-	case "update":
-		fmt.Println("TODO: not implemented");
-	case "list":
-		listFeeds();
-	case "add":
-		addFeed(argv[1], argv[2]);
-	default:
-		getItemsByFeed(argv[0]);
-	}
-}
-
-func addFeed(name string, url string) {
-	feedsMap[name] = url;
-}
-
-func listFeeds() {
-	fmt.Printf("FEEDS: %v\n", len(feedsMap));
-
-	for name, url := range feedsMap {
-		fmt.Printf("%v  ::  %v\n", name, url);
-	}
-}
-
-func getItemsByFeed(feedName string) {
-	url := feedsMap[feedName];
-
-	feed, err := getGeneralFeedForm(url);
+	db, err := makeDb();
 	if err != nil {
-		fmt.Fprint(os.Stderr, err);
+		panic(err);
 	}
-	for _,v := range feed.Items {
-		fmt.Printf("URL: %v\n", v.Title);
+	defer db.Close();
+
+	err = createTables(db);
+	if err != nil {
+		panic(err);
+	}
+
+	for _,feedUrl := range getFeedsFromFile() {
+		fmt.Printf("GETTING FEED: %v\n", feedUrl);
+		feed, err := getGeneralFeedForm(feedUrl);
+		if err != nil {
+			panic(err);
+		}
+		fmt.Printf("FEED TITLE: %v\n", feed.Title);
+		fmt.Printf("FEED URL: %v\n", feed.Url);
+		fmt.Printf("FEED LEN ITEMS: %v\n", len(feed.Items));
+
+		fmt.Printf("LEN FEEDS: %v\n", len(feed.Items));
+
+		feedId, err := saveFeedToDb(db, feed);
+		if err != nil {
+			panic(err);
+		}
+
+		items, err := getItemsFromFeed(db, feed, feedId);
+		if err != nil {
+			panic(err);
+		}
+		fmt.Printf("DB LAST ITEM \n");
+		fmt.Printf("DB TITLE %v\n", items[0].Title);
+		fmt.Printf("DB URL %v\n", items[0].Url);
+		
+		fmt.Println("===================");
 	}
 }
 
@@ -62,3 +72,13 @@ func httpRequest(url string) (string, error) {
 	body, err := io.ReadAll(resp.Body);
 	return string(body), nil;
 }
+
+func getFeedsFromFile() map[string]string {
+	feeds := map[string]string{
+		"j3s": "https://j3s.sh/feed.atom",
+		"tadaima": "https://tadaima.bearblog.dev/feed",
+		"ratfactor": "https://ratfactor.com/atom.xml",
+	}
+	return feeds;
+}
+
