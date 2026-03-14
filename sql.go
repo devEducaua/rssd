@@ -36,8 +36,9 @@ func SqlCreateTables(db *sql.DB) error {
             title TEXT NOT NULL,
             updated TEXT NOT NULL,
             content TEXT NOT NULL,
+			Read BOOLEAN DEFAULT FALSE,
 			url TEXT NOT NULL,
-			feed_id INTEGER NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
+			FOREIGN KEY(feed_id) REFERENCES feeds(id) ON DELETE CASCADE NOT NULL,
 			UNIQUE(feed_id, url)
         )
     `)
@@ -48,8 +49,8 @@ func SqlCreateTables(db *sql.DB) error {
 	return nil;
 }
 
-func SqlGetItemsByFeed(db *sql.DB, feed Feed, feedId int64) ([]Item, error) {
-	rows, err := db.Query("SELECT title, updated, content, url FROM items WHERE feed_id = ?", feedId);
+func SqlGetItemsByFeed(db *sql.DB, feedId int64) ([]Item, error) {
+	rows, err := db.Query("SELECT title, updated, content, url, Read FROM items WHERE feed_id = ?", feedId);
 	if err != nil {
 		return nil, err;
 	}
@@ -59,7 +60,7 @@ func SqlGetItemsByFeed(db *sql.DB, feed Feed, feedId int64) ([]Item, error) {
 
 	for rows.Next() {
 		var it Item;
-		if err := rows.Scan(&it.Title, &it.Updated, &it.Content, &it.Url); err != nil {
+		if err := rows.Scan(&it.Title, &it.Updated, &it.Content, &it.Url, &it.Read); err != nil {
             return items, err
         }
 		items = append(items, it);
@@ -95,6 +96,23 @@ func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
 
 func SqlRemoveFeed(db *sql.DB, feedId int64) error {
 	_, err := db.Exec(`DELETE FROM feeds WHERE id=?`, feedId);
+	if err != nil {
+		return err;
+	}
+	return nil;
+}
+
+func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
+	_, err := db.Exec(`UPDATE feeds SET title=?, url=?, description=? WHERE id=?`, feed.Title, feed.Url, feed.Description, feedId);
+	if err != nil {
+		return err;
+	}
+
+	return nil;
+}
+
+func SqlUpdateItem(db *sql.DB, item Item, itemId int64) error {
+	_, err := db.Exec(`UPDATE items SET title=?, url=?, read=?, content=?, updated=? WHERE id=?`, item.Title, item.Url, item.Read, item.Content, item.Updated, itemId);
 	if err != nil {
 		return err;
 	}
