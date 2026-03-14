@@ -5,7 +5,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func makeDb() (*sql.DB, error) {
+func SqlCreate() (*sql.DB, error) {
 	const DBPATH = "./rssd.db";
 
 	db, err := sql.Open("sqlite", DBPATH);
@@ -16,7 +16,7 @@ func makeDb() (*sql.DB, error) {
 	return db, nil;
 }
 
-func createTables(db *sql.DB) error {
+func SqlCreateTables(db *sql.DB) error {
 	_, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS feeds (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +48,7 @@ func createTables(db *sql.DB) error {
 	return nil;
 }
 
-func getItemsFromFeed(db *sql.DB, feed Feed, feedId int64) ([]Item, error) {
+func SqlGetItemsByFeed(db *sql.DB, feed Feed, feedId int64) ([]Item, error) {
 	rows, err := db.Query("SELECT title, updated, content, url FROM items WHERE feed_id = ?", feedId);
 	if err != nil {
 		return nil, err;
@@ -71,7 +71,7 @@ func getItemsFromFeed(db *sql.DB, feed Feed, feedId int64) ([]Item, error) {
 	return items, nil;
 }
 
-func saveFeedToDb(db *sql.DB, feed Feed) (int64, error) {
+func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
 	_, err := db.Exec(`INSERT OR IGNORE INTO feeds (title, url, description) VALUES (?, ?, ?)`, feed.Title, feed.Url, feed.Description);
 	if err != nil {
 		return -1, err;
@@ -83,7 +83,6 @@ func saveFeedToDb(db *sql.DB, feed Feed) (int64, error) {
 	if err := row.Scan(&feedId); err != nil {
 		return -1, err;
 	}
-	// feedId, err := r.LastInsertId();
 
 	for _,f := range feed.Items {
 		_, err = db.Exec(`INSERT OR IGNORE INTO items (title, updated, content, url, feed_id) VALUES (?, ?, ?, ?, ?)`, f.Title, f.Updated, f.Content, f.Url, feedId);	
@@ -92,5 +91,13 @@ func saveFeedToDb(db *sql.DB, feed Feed) (int64, error) {
 		}
 	}
 	return feedId, nil;
+}
+
+func SqlRemoveFeed(db *sql.DB, feedId int64) error {
+	_, err := db.Exec(`DELETE FROM feeds WHERE id=?`, feedId);
+	if err != nil {
+		return err;
+	}
+	return nil;
 }
 
