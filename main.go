@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
-	// "os"
+	"os"
+	"strings"
 )
 
 type Feed struct {
@@ -19,47 +21,39 @@ type Item struct {
     Title string
     Updated string
     Content string
+	Read bool
 }
 
+const FEEDSFILEPATH = "./feeds.txt";	
+const SOCKPATH = "/tmp/rssd.sock";
+
 func main() {
-	db, err := makeDb();
+	if err := os.Remove(SOCKPATH); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "ERROR: failed to remove the file %v: %v\n", SOCKPATH, err);
+		os.Exit(1);
+	}
+
+	listener, err := net.Listen("unix", SOCKPATH);
 	if err != nil {
-		panic(err);
-	}
-	defer db.Close();
-
-	err = createTables(db);
-	if err != nil {
-		panic(err);
+		fmt.Fprintf(os.Stderr, "ERROR: on listen: %v\n", err);
+		os.Exit(1);
 	}
 
-	for _,feedUrl := range getFeedsFromFile() {
-		fmt.Printf("GETTING FEED: %v\n", feedUrl);
-		feed, err := getGeneralFeedForm(feedUrl);
-		if err != nil {
-			panic(err);
-		}
-		fmt.Printf("FEED TITLE: %v\n", feed.Title);
-		fmt.Printf("FEED URL: %v\n", feed.Url);
-		fmt.Printf("FEED LEN ITEMS: %v\n", len(feed.Items));
+	defer listener.Close();
 
-		fmt.Printf("LEN FEEDS: %v\n", len(feed.Items));
-
-		feedId, err := saveFeedToDb(db, feed);
+	for {
+		conn, err := listener.Accept();
 		if err != nil {
-			panic(err);
+			fmt.Fprintf(os.Stderr, "ERROR: on accept: %v\n", err);
 		}
 
-		items, err := getItemsFromFeed(db, feed, feedId);
-		if err != nil {
-			panic(err);
-		}
-		fmt.Printf("DB LAST ITEM \n");
-		fmt.Printf("DB TITLE %v\n", items[0].Title);
-		fmt.Printf("DB URL %v\n", items[0].Url);
-		
-		fmt.Println("===================");
+		go handleConnection(conn);
 	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close();
+	fmt.Printf("REMOTE: %v\n", conn.LocalAddr().String());
 }
 
 func httpRequest(url string) (string, error) {
@@ -73,12 +67,23 @@ func httpRequest(url string) (string, error) {
 	return string(body), nil;
 }
 
-func getFeedsFromFile() map[string]string {
-	feeds := map[string]string{
-		"j3s": "https://j3s.sh/feed.atom",
-		"tadaima": "https://tadaima.bearblog.dev/feed",
-		"ratfactor": "https://ratfactor.com/atom.xml",
+func parseFeedsFile(feedsFilePath string) (map[string]string, error) {
+	feeds := make(map[string]string);
+
+	bytes, err := os.ReadFile(FEEDSFILEPATH);
+	if err != nil {
+		return nil, err;
 	}
-	return feeds;
+
+	lines := strings.Split(string(bytes), "\n");	
+
+	for _,l := range lines {
+		if strings.TrimSpace(l) != "" {
+			parts := strings.SplitN(l, " ", 2);
+			feeds[parts[0]] = parts[1];
+		}
+	}
+
+	return feeds, nil;
 }
 

@@ -2,7 +2,7 @@ package main
 
 import (
     "database/sql"
-    _ "modernc.org/sqlite"
+    _"modernc.org/sqlite"
 )
 
 func SqlCreate() (*sql.DB, error) {
@@ -104,15 +104,6 @@ func SqlRemoveFeed(db *sql.DB, feedId int64) error {
 
 func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
     _, err := db.Exec(`UPDATE feeds SET title=?, url=?, description=? WHERE id=?`, feed.Title, feed.Url, feed.Description, feedId);
-    if err != nil {
-        return err;
-    }
-
-    return nil;
-}
-
-func SqlUpdateItem(db *sql.DB, item Item, itemId int64) error {
-    _, err := db.Exec(`UPDATE items SET title=?, url=?, read=?, content=?, updated=? WHERE id=?`, item.Title, item.Url, item.Read, item.Content, item.Updated, itemId);
     if err != nil {
         return err;
     }
