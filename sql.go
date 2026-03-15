@@ -5,7 +5,7 @@ import (
     _"modernc.org/sqlite"
 )
 
-func SqlCreate() (*sql.DB, error) {
+func SqlConnect() (*sql.DB, error) {
     const DBPATH = "./rssd.db";
 
     db, err := sql.Open("sqlite", DBPATH);
@@ -78,12 +78,10 @@ func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
         return -1, err;
     }
 
-    row := db.QueryRow(`SELECT id FROM feeds WHERE url = ?`, feed.Url);
-
-    var feedId int64;
-    if err := row.Scan(&feedId); err != nil {
-        return -1, err;
-    }
+	feedId, err := SqlGetFeedId(db, feed);
+	if err != nil {
+		return -1, err;
+	}
 
     for _,f := range feed.Items {
         _, err = db.Exec(`INSERT OR IGNORE INTO items (title, updated, content, url, feed_id) VALUES (?, ?, ?, ?, ?)`, f.Title, f.Updated, f.Content, f.Url, feedId);    
@@ -108,6 +106,38 @@ func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
         return err;
     }
     return nil;
+}
+
+func SqlGetFeedId(db *sql.DB, feed Feed) (int64, error) {
+	
+	row := db.QueryRow(`SELECT id FROM feeds WHERE url=?`, feed.Url);
+
+    var feedId int64;
+    if err := row.Scan(&feedId); err != nil {
+        return -1, err;
+    }
+
+	if err := row.Err(); err != nil {
+		return -1, err;
+	}
+
+	return feedId, nil;
+}
+
+func SqlGetFeedByName(db *sql.DB, name string) (Feed, error) {
+
+	row := db.QueryRow(`SELECT title, description, url FROM feeds WHERE name=?`, name);
+
+	var feed Feed;
+    if err := row.Scan(&feed.Title, &feed.Description, &feed.Url); err != nil {
+        return Feed{}, err;
+    }
+
+	if err := row.Err(); err != nil {
+		return Feed{}, err;
+	}
+
+	return feed, nil;
 }
 
 func SqlCustomQuery(db *sql.DB, query string, args ...any) (*sql.Rows, error) {
