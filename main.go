@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -24,7 +25,7 @@ type Item struct {
 	Read bool
 }
 
-const FEEDSFILEPATH = "./feeds.txt";	
+const FEEDSFILEPATH = "./tests/feeds.txt";	
 const SOCKPATH = "/tmp/rssd.sock";
 
 func main() {
@@ -53,7 +54,26 @@ func main() {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close();
-	fmt.Printf("REMOTE: %v\n", conn.LocalAddr().String());
+
+	reader := bufio.NewReader(conn);
+	command, err := reader.ReadString('\n');
+	if err != nil {
+		if err == io.EOF {
+			return;
+		}
+		fmt.Fprintf(os.Stderr, "ERROR: on reading the command: %v\n", err);
+		return;
+	}
+
+	var msg string;
+	res, err := parseCommand(command);
+	if err != nil {
+		msg = fmt.Sprintf("NOT : %v", err);
+	}
+
+	msg = fmt.Sprintf("YES : %v", res);
+
+	fmt.Fprintf(conn, msg);
 }
 
 func httpRequest(url string) (string, error) {
