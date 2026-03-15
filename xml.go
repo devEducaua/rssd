@@ -94,7 +94,7 @@ func atomToGeneral(xmlFile string) (Feed, error) {
     return feed, nil;
 }
 
-func getGeneralFeedForm(feedUrl string) (Feed, error) {
+func requestFeed(feedUrl string) (Feed, error) {
 	// TODO: handle more protocols like: gemini and gopher.
     xmlFile, err := httpRequest(feedUrl);
     if err != nil {
