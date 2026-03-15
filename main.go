@@ -67,11 +67,12 @@ func handleConnection(conn net.Conn) {
 
 	var msg string;
 	res, err := parseCommand(command);
+
+	msg = fmt.Sprintf("YES : %v", res);
+
 	if err != nil {
 		msg = fmt.Sprintf("NOT : %v", err);
 	}
-
-	msg = fmt.Sprintf("YES : %v", res);
 
 	fmt.Fprintf(conn, msg);
 }
