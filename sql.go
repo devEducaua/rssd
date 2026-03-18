@@ -65,9 +65,9 @@ func SqlDeleteFeed(db *sql.DB, url string) error {
 	return nil;
 }
 
-// Make a generic functions for these functions
-func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
-    rows, err := db.Query("SELECT * FROM items LIMIT ?", limit);    
+// TODO: find a better to this function
+func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, queryArgs ...any) ([]Item, error) {
+    rows, err := db.Query(query, queryArgs);
     if err != nil {
         return nil, err;
     }
@@ -86,48 +86,30 @@ func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
     }
 
     return items, nil;
+}
+
+func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ?", limit);
+	if err != nil {
+		return nil, err;
+	}
+	return items, nil;
 }
 
 func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]Item, error) {
-    rows, err := db.Query("SELECT * FROM items LIMIT ? WHERE read=?", limit, read);    
-    if err != nil {
-        return nil, err;
-    }
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE read=?", limit, read);
 
-    var items []Item;
-    for rows.Next() {
-        var it Item;
-        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
-            return nil, err;    
-        }
-        items = append(items, it);
-    }
-
-    if err := rows.Err(); err != nil {
-        return nil, err;
-    }
-
-    return items, nil;
+	if err != nil {
+		return nil, err;
+	}
+	return items, nil;
 }
 
 func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]Item, error) {
-    rows, err := db.Query("SELECT * FROM items LIMIT ? WHERE name=?", limit, name);
-    if err != nil {
-        return nil, err;
-    }
-
-    var items []Item;
-    for rows.Next() {
-        var it Item;
-        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
-            return nil, err;
-        }
-        items = append(items, it);
-    }
-
-    if err := rows.Err(); err != nil {
-        return nil, err;
-    }
-
-    return items, nil;
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE name=?", limit, name);
+    
+	if err != nil {
+		return nil, err;
+	}
+	return items, nil;
 }
