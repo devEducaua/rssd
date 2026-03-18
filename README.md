@@ -8,3 +8,10 @@ see [spec](./SPEC.md) for more information.
 
 dependencies:
 - modernc.org/sqlite
+
+# TODO
+
+- [ ] find and update command
+- [ ] config file
+- [ ] tcp option
+- [ ] other protocol feeds support: gopher, gemini, spartan

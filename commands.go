@@ -27,7 +27,8 @@ func parseCommand(command string) Response {
 			items, err = getCommand(parts);
 			r.Response = items;
 		case "UPDATE":
-			panic("TODO: not implemented");
+			msg, err = updateCommand(parts);
+			r.Response = msg;
 		case "READ":
 			msg, err = readCommand(parts);
 			r.Response = msg;	
@@ -94,35 +95,44 @@ func updateCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
 	}
 
+	// TODO: add feedname support
 	db, err := SqlConnect();
 	if err != nil {
 		return "", err;
 	}
 	defer db.Close();
 
-	panic("TODO: not implemented");
+
 
 	return fmt.Sprintf("the database was updated"), nil;
 }
 
-// TODO: mescle read and unread in a unified function changeRead
+func changeRead(stringId string, read bool) (int64, error) {
+	id, err := strconv.ParseInt(stringId, 10, 64);
+	if err != nil {
+		return -1, err;
+	}
+
+	db, err := SqlConnect();
+	if err != nil {
+		return -1, err;
+	}
+	defer db.Close();
+
+	err = SqlUpdateItemRead(db, id, read);
+	if err != nil {
+		return -1, err;
+	}
+
+	return id, nil;
+}
+
 func readCommand(command []string) (string, error) {
 	if len(command) != 2 {
 		return "", fmt.Errorf("invalid syntax on the `READ` command: `READ` only accepts one argument");
 	}
 
-	id, err := strconv.ParseInt(command[1], 10, 64);
-	if err != nil {
-		return "", err;
-	}
-
-	db, err := SqlConnect();
-	if err != nil {
-		return "", err;
-	}
-	defer db.Close();
-
-	err = SqlUpdateItemRead(db, id, true);
+	id, err := changeRead(command[1], true);
 	if err != nil {
 		return "", err;
 	}
@@ -135,18 +145,7 @@ func unreadCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `UNREAD` command: `UNREAD` only accepts one argument");
 	}
 
-	id, err := strconv.ParseInt(command[1], 10, 64);
-	if err != nil {
-		return "", err;
-	}
-
-	db, err := SqlConnect();
-	if err != nil {
-		return "", err;
-	}
-	defer db.Close();
-
-	err = SqlUpdateItemRead(db, id, false);
+	id, err := changeRead(command[1], false);
 	if err != nil {
 		return "", err;
 	}

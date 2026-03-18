@@ -1,7 +1,9 @@
 # rssd protocol specification
 
 ## requests
-requests are in plain text, and contains a command, his arguments and a CTRF in the end. a request can only contain spaces if the are surrounded with quotes.
+requests are in plain text, and contains a command, his arguments and a CTRF in the end. 
+
+a request can only contain spaces if the are surrounded with quotes.
 
 ### command list
 
@@ -33,6 +35,7 @@ FIND
 
 ## responses
 the responses are in json, and have the obrigatory status attribute.
+
 the status attribute can be "yes" or "not".
 
 ### response examples
@@ -86,6 +89,7 @@ example UPDATE response
 ```
 
 example FIND response
+
 returns a ordered array of possibly results.
 ```json 
 {
