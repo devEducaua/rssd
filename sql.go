@@ -2,11 +2,9 @@ package main
 
 import (
     "database/sql"
-    _"modernc.org/sqlite"
+    _ "modernc.org/sqlite"
 )
-
-func SqlConnect() (*sql.DB, error) {
-    const DBPATH = "./rssd.db";
+func SqlConnect() (*sql.DB, error) { const DBPATH = "./rssd.db";
 
     db, err := sql.Open("sqlite", DBPATH);
     if err != nil {
@@ -16,14 +14,15 @@ func SqlConnect() (*sql.DB, error) {
     return db, nil;
 }
 
-func SqlCreateTables(db *sql.DB) error {
+func SqlCreateTablesIfNotExists(db *sql.DB) error {
     _, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS feeds (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
+            custom_name TEXT NOT NULL,
             url TEXT NOT NULL,
             description TEXT NOT NULL,
-            UNIQUE(url)
+            UNIQUE(url, custom_name)
         )
     `)
     if err != nil {
@@ -38,7 +37,8 @@ func SqlCreateTables(db *sql.DB) error {
             content TEXT NOT NULL,
             read BOOLEAN DEFAULT FALSE,
             url TEXT NOT NULL,
-            FOREIGN KEY(feed_id) REFERENCES feeds(id) ON DELETE CASCADE NOT NULL,
+            feed_id INTEGER NOT NULL,
+            FOREIGN KEY(feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
             UNIQUE(feed_id, url)
         )
     `)
@@ -49,22 +49,38 @@ func SqlCreateTables(db *sql.DB) error {
     return nil;
 }
 
-func SqlGetItemsByFeed(db *sql.DB, feedId int64) ([]Item, error) {
-    rows, err := db.Query("SELECT title, updated, content, url, read FROM items WHERE feed_id = ?", feedId);
+func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
+	_, err := db.Exec("UPDATE items SET read=? WHERE id=?", read, id);
+	if err != nil {
+		return err;
+	}
+	return nil;
+}
+
+func SqlDeleteFeed(db *sql.DB, url string) error {
+	_, err := db.Exec("DELETE FROM feeds WHERE url=?", url);
+	if err != nil {
+		return err;
+	}
+	return nil;
+}
+
+// Make a generic functions for these functions
+func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
+    rows, err := db.Query("SELECT * FROM items LIMIT ?", limit);    
     if err != nil {
         return nil, err;
     }
-    defer rows.Close();
 
     var items []Item;
-
     for rows.Next() {
         var it Item;
-        if err := rows.Scan(&it.Title, &it.Updated, &it.Content, &it.Url, &it.Read); err != nil {
-            return items, err
+        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
+            return nil, err;    
         }
         items = append(items, it);
     }
+
     if err := rows.Err(); err != nil {
         return nil, err;
     }
@@ -72,80 +88,46 @@ func SqlGetItemsByFeed(db *sql.DB, feedId int64) ([]Item, error) {
     return items, nil;
 }
 
-func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
-    _, err := db.Exec(`INSERT OR IGNORE INTO feeds (title, url, description) VALUES (?, ?, ?)`, feed.Title, feed.Url, feed.Description);
+func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]Item, error) {
+    rows, err := db.Query("SELECT * FROM items LIMIT ? WHERE read=?", limit, read);    
     if err != nil {
-        return -1, err;
+        return nil, err;
     }
 
-	feedId, err := SqlGetFeedId(db, feed);
-	if err != nil {
-		return -1, err;
-	}
-
-    for _,f := range feed.Items {
-        _, err = db.Exec(`INSERT OR IGNORE INTO items (title, updated, content, url, feed_id) VALUES (?, ?, ?, ?, ?)`, f.Title, f.Updated, f.Content, f.Url, feedId);    
-        if err != nil {
-            return -1, err;
+    var items []Item;
+    for rows.Next() {
+        var it Item;
+        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
+            return nil, err;    
         }
+        items = append(items, it);
     }
-    return feedId, nil;
+
+    if err := rows.Err(); err != nil {
+        return nil, err;
+    }
+
+    return items, nil;
 }
 
-func SqlRemoveFeed(db *sql.DB, feedId int64) error {
-    _, err := db.Exec(`DELETE FROM feeds WHERE id=?`, feedId);
+func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]Item, error) {
+    rows, err := db.Query("SELECT * FROM items LIMIT ? WHERE name=?", limit, name);
     if err != nil {
-        return err;
-    }
-    return nil;
-}
-
-func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
-    _, err := db.Exec(`UPDATE feeds SET title=?, url=?, description=? WHERE id=?`, feed.Title, feed.Url, feed.Description, feedId);
-    if err != nil {
-        return err;
-    }
-    return nil;
-}
-
-func SqlGetFeedId(db *sql.DB, feed Feed) (int64, error) {
-	
-	row := db.QueryRow(`SELECT id FROM feeds WHERE url=?`, feed.Url);
-
-    var feedId int64;
-    if err := row.Scan(&feedId); err != nil {
-        return -1, err;
+        return nil, err;
     }
 
-	if err := row.Err(); err != nil {
-		return -1, err;
-	}
-
-	return feedId, nil;
-}
-
-func SqlGetFeedByName(db *sql.DB, name string) (Feed, error) {
-
-	row := db.QueryRow(`SELECT title, description, url FROM feeds WHERE name=?`, name);
-
-	var feed Feed;
-    if err := row.Scan(&feed.Title, &feed.Description, &feed.Url); err != nil {
-        return Feed{}, err;
+    var items []Item;
+    for rows.Next() {
+        var it Item;
+        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
+            return nil, err;
+        }
+        items = append(items, it);
     }
 
-	if err := row.Err(); err != nil {
-		return Feed{}, err;
-	}
+    if err := rows.Err(); err != nil {
+        return nil, err;
+    }
 
-	return feed, nil;
+    return items, nil;
 }
-
-func SqlCustomQuery(db *sql.DB, query string, args ...any) (*sql.Rows, error) {
-	rows, err := db.Query(query, args);
-	if err != nil {
-		return nil, err;
-	}
-
-	return rows, nil; 
-}
-
