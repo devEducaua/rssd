@@ -27,6 +27,7 @@ func parseCommand(command string) Response {
 			items, err = getCommand(parts);
 			r.Response = items;
 		case "UPDATE":
+			panic("TODO: not implemented");
 		case "READ":
 			msg, err = readCommand(parts);
 			r.Response = msg;	
@@ -36,7 +37,10 @@ func parseCommand(command string) Response {
 		case "DELETE":
 			msg, err = deleteCommand(parts);
 			r.Response = msg;
-	//TODO: default case and the FIND command.
+		case "FIND":
+			panic("TODO: not implemented");
+		default:
+			err = fmt.Errorf("command: %v doesn't exists", parts[0]);
 	}
 
 	if err != nil {
