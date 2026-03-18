@@ -4,6 +4,16 @@ import (
     "database/sql"
     _ "modernc.org/sqlite"
 )
+
+type ItemDB struct {
+	Id int64
+	Title string
+	Updated string
+	Content string
+	Read bool
+	Url string
+}
+
 func SqlConnect() (*sql.DB, error) { const DBPATH = "./rssd.db";
 
     db, err := sql.Open("sqlite", DBPATH);
@@ -66,16 +76,16 @@ func SqlDeleteFeed(db *sql.DB, url string) error {
 }
 
 // TODO: find a better to this function
-func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, queryArgs ...any) ([]Item, error) {
+func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, queryArgs ...any) ([]ItemDB, error) {
     rows, err := db.Query(query, queryArgs);
     if err != nil {
         return nil, err;
     }
 
-    var items []Item;
+    var items []ItemDB;
     for rows.Next() {
-        var it Item;
-        if err := rows.Scan(&it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
+        var it ItemDB;
+        if err := rows.Scan(&it.Id, &it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
             return nil, err;    
         }
         items = append(items, it);
@@ -88,7 +98,7 @@ func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, que
     return items, nil;
 }
 
-func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
+func SqlGetAllItems(db *sql.DB, limit int64) ([]ItemDB, error) {
 	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ?", limit);
 	if err != nil {
 		return nil, err;
@@ -96,7 +106,7 @@ func SqlGetAllItems(db *sql.DB, limit int64) ([]Item, error) {
 	return items, nil;
 }
 
-func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]Item, error) {
+func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
 	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE read=?", limit, read);
 
 	if err != nil {
@@ -105,7 +115,7 @@ func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]Item, error) {
 	return items, nil;
 }
 
-func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]Item, error) {
+func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
 	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE name=?", limit, name);
     
 	if err != nil {

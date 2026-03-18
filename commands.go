@@ -17,7 +17,7 @@ func parseCommand(command string) Response {
 	var r Response;
 
 	var msg string;
-	var items []Item;
+	var items []ItemDB;
 	var err error;
 
 	r.Status = "yes"
@@ -47,8 +47,7 @@ func parseCommand(command string) Response {
 	return r;
 }
 
-// TODO: the get function needs to return the Id's too.
-func getCommand(command []string) ([]Item, error) {
+func getCommand(command []string) ([]ItemDB, error) {
 	if len(command) != 2 {
 		return nil, fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
 	}
@@ -66,7 +65,7 @@ func getCommand(command []string) ([]Item, error) {
 	}	
 	defer db.Close();
 
-	var items []Item;
+	var items []ItemDB;
 
 	switch arg {
 	case "ALL":
@@ -90,8 +89,6 @@ func updateCommand(command []string) (string, error) {
 	if len(command) != 2 {
 		return "", fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
 	}
-
-	//arg := command[1];
 
 	db, err := SqlConnect();
 	if err != nil {
