@@ -1,9 +1,11 @@
 package main
 
 import (
-    "encoding/xml"
-    "fmt"
-    "os"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 )
 
 type XmlAtomFeed struct {
@@ -38,36 +40,51 @@ type XmlRssItem struct {
     Description string `xml:"description"`
 }
 
-func rssToGeneral(xmlFile string) Feed {
-    var rss XmlRss;
+func getFeedFromWeb(feedUrl string) (Feed, error) {
+	u, err := url.Parse(feedUrl);
+	if err != nil {
+		return Feed{}, err;
+	}
 
-    err := xml.Unmarshal([]byte(xmlFile), &rss);
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "ERROR: could not parse the rss file: %v\n", err);
-        os.Exit(1);
-    }
+	var rawXml string;
+	switch u.Scheme {
+	case "gemini":
+		rawXml, err = geminiRequest(feedUrl);
+	case "https", "http":
+		rawXml, err = httpRequest(feedUrl);
+	default:
+		return Feed{}, fmt.Errorf("not supported scheme");
+	}
 
-    var items []Item;
-    for _, e := range rss.Channel.Items {
-        items = append(items, Item{
-            Url:        e.Id,
-            Title:     e.Title,
-            Updated: e.PubDate,
-            Content:   e.Description,
-        })
-    }
+	// TODO: support RSS
+	feed, err := atomToGenericForm(rawXml);
+	if err != nil {
+		return Feed{}, nil;
+	}
 
-    feed := Feed{
-        Url: rss.Channel.Id,
-        Title: rss.Channel.Title,
-        Description: rss.Channel.Description,
-        Items: items,
-    }
-
-    return feed;
+	return feed, nil;
 }
 
-func atomToGeneral(xmlFile string) (Feed, error) {
+func httpRequest(url string) (string, error) {
+	res, err := http.Get(url);
+	if err != nil {
+		return "", err;
+	}
+	defer res.Body.Close();
+
+	body, err := io.ReadAll(res.Body);
+	if err != nil {
+		return "", err;
+	}
+
+	return string(body), nil;
+}
+
+func geminiRequest(url string) (string, error) {
+	panic("TODO: implement gemini requests");
+}
+
+func atomToGenericForm(xmlFile string) (Feed, error) {
     var atom XmlAtomFeed;
 
     err := xml.Unmarshal([]byte(xmlFile), &atom);
@@ -82,31 +99,16 @@ func atomToGeneral(xmlFile string) (Feed, error) {
             Title:     e.Title,
             Updated: e.Updated,
             Content:   e.Content,
+			Read: false,
         })
     }
     feed := Feed{
         Url: atom.Id,
         Title: atom.Title,
+		Name: atom.Title,
         Description: atom.Subtitle,
         Items: items,
     }
-
-    return feed, nil;
-}
-
-func requestFeed(feedUrl string) (Feed, error) {
-	// TODO: handle more protocols like: gemini and gopher.
-    xmlFile, err := httpRequest(feedUrl);
-    if err != nil {
-        return Feed{}, fmt.Errorf("ERROR: could not request the file: %v\n", err);
-    }
-
-	// TODO: this handles only atom;
-    var feed Feed;
-	feed, err = atomToGeneral(xmlFile);
-	if err != nil {
-		return Feed{}, err;
-	}
 
     return feed, nil;
 }
