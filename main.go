@@ -2,54 +2,62 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
-	"strings"
 )
 
 type Feed struct {
-    Url string
-    Title string
-    Description string
-    Items []Item
+	Title string
+	Name string
+	Description string
+	Url string
+	Items []Item
 }
 
 type Item struct {
-    Url string
-    Title string
-    Updated string
-    Content string
+	Title string
+	Updated string
+	Content string
 	Read bool
+	Url string
 }
 
-const FEEDSFILEPATH = "./tests/feeds.txt";	
-const SOCKPATH = "/tmp/rssd.sock";
-
 func main() {
-	if err := os.Remove(SOCKPATH); err != nil && !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "ERROR: failed to remove the file %v: %v\n", SOCKPATH, err);
-		os.Exit(1);
-	}
-
-	listener, err := net.Listen("unix", SOCKPATH);
+	// TODO: add option to choose between unixsockets and tcp
+	listener, err := net.Listen("unix", "/tmp/rssd.sock");
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: on listen: %v\n", err);
+		fmt.Fprintf(os.Stderr, "ERROR: on listening: %v\n", err);
+		os.Exit(1);
+	}
+	defer listener.Close();
+
+	db, err := SqlConnect();
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: on connecting to the database: %v\n", err);
 		os.Exit(1);
 	}
 
-	defer listener.Close();
+	err = SqlCreateTablesIfNotExists(db);
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: on creating tables: %v\n", err);
+		os.Exit(1);
+	}
+
+	db.Close();
 
 	for {
 		conn, err := listener.Accept();
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: on accept: %v\n", err);
+			fmt.Fprintf(os.Stderr, "ERROR: on listening: %v\n", err);
+			os.Exit(1);
 		}
 
 		go handleConnection(conn);
 	}
+
 }
 
 func handleConnection(conn net.Conn) {
@@ -65,46 +73,13 @@ func handleConnection(conn net.Conn) {
 		return;
 	}
 
-	var msg string;
-	res, err := parseCommand(command);
+	res := parseCommand(command);
 
-	msg = fmt.Sprintf("YES : %v", res);
-
+	b, err := json.MarshalIndent(res, "", "    ");
 	if err != nil {
-		msg = fmt.Sprintf("NOT : %v", err);
+		fmt.Fprintf(os.Stderr, "ERROR: on marshal the response json: %v\n", err);
+		return;	
 	}
 
-	fmt.Fprintf(conn, msg);
+	fmt.Fprintf(conn, string(b));
 }
-
-func httpRequest(url string) (string, error) {
-	resp, err := http.Get(url);
-	if err != nil {
-		return "", err;
-	}
-	defer resp.Body.Close();
-
-	body, err := io.ReadAll(resp.Body);
-	return string(body), nil;
-}
-
-func parseFeedsFile(feedsFilePath string) (map[string]string, error) {
-	feeds := make(map[string]string);
-
-	bytes, err := os.ReadFile(FEEDSFILEPATH);
-	if err != nil {
-		return nil, err;
-	}
-
-	lines := strings.Split(string(bytes), "\n");	
-
-	for _,l := range lines {
-		if strings.TrimSpace(l) != "" {
-			parts := strings.SplitN(l, " ", 2);
-			feeds[parts[0]] = parts[1];
-		}
-	}
-
-	return feeds, nil;
-}
-
