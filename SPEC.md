@@ -32,6 +32,7 @@ FIND
 - description: find a item
 - arguments: text
 - argument description: a text that is on the attributes of the item.
+- optional argument: limit
 
 ## responses
 the responses are in json, and have the obrigatory status attribute.

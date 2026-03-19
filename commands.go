@@ -18,6 +18,8 @@ func parseCommand(command string) Response {
 
 	var msg string;
 	var items []ItemDB;
+	var findIds []int64;
+
 	var err error;
 
 	r.Status = "yes"
@@ -39,7 +41,8 @@ func parseCommand(command string) Response {
 			msg, err = deleteCommand(parts);
 			r.Response = msg;
 		case "FIND":
-			panic("TODO: not implemented");
+			findIds, err = findCommand(parts);
+			r.Response = findIds;
 		default:
 			err = fmt.Errorf("command: %v doesn't exists", parts[0]);
 	}
@@ -173,3 +176,28 @@ func deleteCommand(command []string) (string, error) {
 
 	return fmt.Sprintf("feed with url: %v deleted", url), nil;
 }
+
+func findCommand(command []string) ([]int64, error) {
+	if len(command) > 3 || len(command) < 2 {
+		return nil, fmt.Errorf("invalid syntax on the `FIND` command: `FIND` only accepts two arguments");
+	}
+
+	var limit int64 = 3;
+	if len(command) == 3 {
+		limit, _ = strconv.ParseInt(command[2], 10, 64);
+	}
+
+	db, err := SqlConnect();
+	if err != nil {
+		return nil, err;
+	}
+	defer db.Close();
+
+	ids, err := SqlSearchItem(db, command[1], limit);
+	if err != nil {
+		return nil, err;
+	}
+
+	return ids, nil;
+}
+

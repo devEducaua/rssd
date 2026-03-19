@@ -123,3 +123,25 @@ func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
 	}
 	return items, nil;
 }
+
+func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
+	rows, err := db.Query("SELECT id FROM items WHERE title LIKE %?% OR url LIKE %?% OR content LIKE %?% LIMIT ?", text, text, text, limit);
+    if err != nil {
+        return nil, err;
+    }
+
+	var ids int64[];
+    for rows.Next() {
+        var id int64;
+        if err := rows.Scan(&id); err != nil {
+            return nil, err;    
+        }
+        items = append(items, it);
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err;
+    }
+
+	return ids, nil;
+}
