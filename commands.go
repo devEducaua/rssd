@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func parseCommand(command string) Response {
 
 	if err != nil {
 		r.Status = "no";
-		r.Response = err;
+		r.Response = err.Error();
 	}
 
 	return r;
@@ -61,11 +62,11 @@ func getCommand(command []string) ([]ItemDB, error) {
 	}
 
 	var limit int64 = 100;
-	if len(command) != 3 {
-		limit, _ = strconv.ParseInt(command[2], 10, 64);
-	}
+	// if len(command) == 3 {
+	// 	limit, _ = strconv.ParseInt(command[2], 10, 64);
+	// }
 
-	arg := command[1];
+	arg := strings.TrimSpace(command[1]);
 
 	db, err := SqlConnect();
 	if err != nil {
@@ -98,14 +99,58 @@ func updateCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
 	}
 
-	// TODO: add feedname support
 	db, err := SqlConnect();
 	if err != nil {
 		return "", err;
 	}
 	defer db.Close();
 
+	m, err := parseFeedsFile(FEEDSPATH);
+	if err != nil {
+		return "", err;
+	}
 
+	arg := strings.TrimSpace(command[1]);
+
+	// TODO: handle ALL and feedname options
+
+	// TODO: fix this because it really sucks
+	if arg == "ALL" {
+		for _,v := range m {
+			dbFeed, err := SqlGetFeed(db, v);
+			if err != nil && err != sql.ErrNoRows {
+				return "", err;
+			}
+			feed, err := getFeedFromWeb(v);
+			if err != nil {
+				return "", err;
+			}
+
+			if err == sql.ErrNoRows {
+
+				id, err := SqlSaveFeed(db, feed);
+				if err != nil {
+					return "", err;
+				}
+
+				err = SqlSaveFeedItems(db, feed.Items, id);
+				if err != nil {
+					return "", err;
+				}
+
+			} else {
+				err := SqlUpdateFeed(db, feed, dbFeed.Id);
+				if err != nil {
+					return "", err;
+				}
+
+				err = SqlSaveFeedItems(db, feed.Items, dbFeed.Id);
+				if err != nil {
+					return "", err;
+				}
+			}
+		}
+	}
 
 	return fmt.Sprintf("the database was updated"), nil;
 }
@@ -135,7 +180,8 @@ func readCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `READ` command: `READ` only accepts one argument");
 	}
 
-	id, err := changeRead(command[1], true);
+	arg := strings.TrimSpace(command[1]);
+	id, err := changeRead(arg, true);
 	if err != nil {
 		return "", err;
 	}
@@ -148,7 +194,8 @@ func unreadCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `UNREAD` command: `UNREAD` only accepts one argument");
 	}
 
-	id, err := changeRead(command[1], false);
+	arg := strings.TrimSpace(command[1]);
+	id, err := changeRead(arg, false);
 	if err != nil {
 		return "", err;
 	}
@@ -167,7 +214,7 @@ func deleteCommand(command []string) (string, error) {
 	}
 	defer db.Close();
 
-	url := command[1];
+	url := strings.TrimSpace(command[1]);
 
 	err = SqlDeleteFeed(db, url);
 	if err != nil {
@@ -193,7 +240,7 @@ func findCommand(command []string) ([]int64, error) {
 	}
 	defer db.Close();
 
-	ids, err := SqlSearchItem(db, command[1], limit);
+	ids, err := SqlSearchItem(db, strings.TrimSpace(command[1]), limit);
 	if err != nil {
 		return nil, err;
 	}

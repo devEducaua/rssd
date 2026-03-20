@@ -14,6 +14,14 @@ type ItemDB struct {
 	Url string
 }
 
+type FeedDB struct {
+	Id int64
+	Title string
+	Name string
+	Description string
+	Url string
+}
+
 func SqlConnect() (*sql.DB, error) { const DBPATH = "./rssd.db";
 
     db, err := sql.Open("sqlite", DBPATH);
@@ -77,7 +85,7 @@ func SqlDeleteFeed(db *sql.DB, url string) error {
 
 // TODO: find a better to this function
 func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, queryArgs ...any) ([]ItemDB, error) {
-    rows, err := db.Query(query, queryArgs);
+    rows, err := db.Query(query, queryArgs...);
     if err != nil {
         return nil, err;
     }
@@ -99,7 +107,7 @@ func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, que
 }
 
 func SqlGetAllItems(db *sql.DB, limit int64) ([]ItemDB, error) {
-	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ?", limit);
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items LIMIT ?", limit);
 	if err != nil {
 		return nil, err;
 	}
@@ -107,7 +115,7 @@ func SqlGetAllItems(db *sql.DB, limit int64) ([]ItemDB, error) {
 }
 
 func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
-	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE read=?", limit, read);
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items WHERE read=? LIMIT ?", read, limit);
 
 	if err != nil {
 		return nil, err;
@@ -116,7 +124,16 @@ func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
 }
 
 func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
-	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT * FROM items LIMIT ? WHERE name=?", limit, name);
+	row := db.QueryRow("SELECT id FROM feeds WHERE custom_name=?", name);
+
+	var id int64;
+
+	err := row.Scan(&id);
+	if err != nil {
+		return nil, err;
+	}
+	
+	items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items WHERE feed_id=? LIMIT ?", id, limit);
     
 	if err != nil {
 		return nil, err;
@@ -130,13 +147,13 @@ func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
         return nil, err;
     }
 
-	var ids int64[];
+	var ids []int64;
     for rows.Next() {
         var id int64;
         if err := rows.Scan(&id); err != nil {
             return nil, err;    
         }
-        items = append(items, it);
+        ids = append(ids, id);
     }
 
     if err := rows.Err(); err != nil {
@@ -145,3 +162,49 @@ func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
 
 	return ids, nil;
 }
+
+func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
+	_, err := db.Exec("UPDATE feeds SET title=?, custom_name=?, description=? WHERE id=?", feed.Title, feed.Name, feed.Description, feedId);
+	if err != nil {
+		return err;
+	}
+
+	return nil;
+}
+
+func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
+	result, err := db.Exec("INSERT INTO feeds (title, name, description, url) VALUES (?, ?, ?, ?)", feed.Title, feed.Name, feed.Description, feed.Url);
+	if err != nil {
+		return -1, err;
+	}
+
+	id, err := result.LastInsertId();
+	if err != nil {
+		return -1, err;
+	}
+
+	return id, nil;
+}
+
+func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
+	for _,it := range items {
+		_, err := db.Exec("INSERT INTO OR IGNORE items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
+		if err != nil {
+			return err;
+		}
+	}
+	return nil;
+}
+
+func SqlGetFeed(db *sql.DB, url string) (FeedDB, error) {
+	row := db.QueryRow("SELECT * FROM feeds WHERE url=?", url);
+	var f FeedDB;
+	err := row.Scan(&f.Id, &f.Title, &f.Name, &f.Url, &f.Description);
+
+	if err != nil {
+		return FeedDB{}, err;
+	}
+	
+	return f, nil;
+}
+
