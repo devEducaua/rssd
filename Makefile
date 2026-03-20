@@ -1,7 +1,9 @@
 
+SRCS=$(wildcard *go)
+
 all: rssd
 
-rssd:
+rssd: $(SRCS)
 	go build -o $@
 
 clean:
