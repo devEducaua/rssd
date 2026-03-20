@@ -25,7 +25,12 @@ type Item struct {
 	Url string
 }
 
+// migrate this to a config file.
+const FEEDSPATH = "./feeds.txt";
+
 func main() {
+	os.Remove("/tmp/rssd.sock");
+
 	// TODO: add option to choose between unixsockets and tcp
 	listener, err := net.Listen("unix", "/tmp/rssd.sock");
 	if err != nil {
@@ -83,3 +88,4 @@ func handleConnection(conn net.Conn) {
 
 	fmt.Fprintf(conn, string(b));
 }
+
