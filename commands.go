@@ -214,14 +214,17 @@ func deleteCommand(command []string) (string, error) {
 	}
 	defer db.Close();
 
-	url := strings.TrimSpace(command[1]);
-
-	err = SqlDeleteFeed(db, url);
+	id, err := strconv.ParseInt(strings.TrimSpace(command[1]), 10, 64);
 	if err != nil {
 		return "", err;
 	}
 
-	return fmt.Sprintf("feed with url: %v deleted", url), nil;
+	err = SqlDeleteFeed(db, id);
+	if err != nil {
+		return "", err;
+	}
+
+	return fmt.Sprintf("feed with id: %v deleted", id), nil;
 }
 
 func findCommand(command []string) ([]int64, error) {

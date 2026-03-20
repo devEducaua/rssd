@@ -75,8 +75,8 @@ func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
 	return nil;
 }
 
-func SqlDeleteFeed(db *sql.DB, url string) error {
-	_, err := db.Exec("DELETE FROM feeds WHERE url=?", url);
+func SqlDeleteFeed(db *sql.DB, id int64) error {
+	_, err := db.Exec("DELETE FROM feeds WHERE id=?", id);
 	if err != nil {
 		return err;
 	}
