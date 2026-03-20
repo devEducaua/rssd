@@ -11,7 +11,6 @@ dependencies:
 
 # TODO
 
-- [ ] find and update command
-- [ ] config file
-- [ ] tcp option
-- [ ] other protocol feeds support: gopher, gemini, spartan
+- config file
+- tcp option
+- other protocol feeds support: gopher, gemini, spartan

@@ -231,7 +231,7 @@ func findCommand(command []string) ([]int64, error) {
 
 	var limit int64 = 3;
 	if len(command) == 3 {
-		limit, _ = strconv.ParseInt(command[2], 10, 64);
+		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
 	}
 
 	db, err := SqlConnect();
