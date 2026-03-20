@@ -1,0 +1,13 @@
+{
+    "method": "unix",
+    "feeds": [
+        {
+            "name": "tadaima",
+            "url": "https://tadaima.bearblog.dev/feed"
+        },
+        {
+            "name": "j3s",
+            "url": "https://j3s.sh/feed.atom"
+        }
+    ]
+}

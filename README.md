@@ -11,6 +11,7 @@ dependencies:
 
 # TODO
 
+- optimize update command
 - config file
 - tcp option
 - other protocol feeds support: gopher, gemini, spartan

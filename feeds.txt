@@ -1,3 +1,0 @@
-tadaima https://tadaima.bearblog.dev/feed
-j3s.sh https://j3s.sh/feed.atom
-ratfactor https://ratfactor.com/atom.xml

@@ -1,28 +1,31 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
-	"strings"
 )
 
-func parseFeedsFile(path string) (map[string]string, error) {
+type ConfigFileFeed struct {
+	Name string `json:"name"`
+	Url string `json:"url"`
+}
+
+type ConfigFile struct {
+	Method string `json:"method"`
+	Feeds []ConfigFileFeed `json:"feeds"`
+}
+
+func decodeConfig() (ConfigFile, error) {
+	const path = "./config.json";
 
 	dat, err := os.ReadFile(path);
 	if err != nil {
-		return nil, err;
-	}
-	m := make(map[string]string);
-
-	contents := string(dat);	
-
-	lines := strings.Split(contents, "\n");
-
-	for _,l := range lines {
-		if strings.TrimSpace(l) != "" {
-			parts := strings.SplitN(l, " ", 2);
-			m[parts[0]] = parts[1];
-		}
+		return ConfigFile{}, err;
 	}
 
-	return m, nil;
+	var c ConfigFile;
+	json.Unmarshal(dat, &c);
+
+	return c, nil;
 }
+

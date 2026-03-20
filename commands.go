@@ -120,7 +120,9 @@ func updateCommand(command []string) (string, error) {
 	}
 	defer db.Close();
 
-	m, err := parseFeedsFile(FEEDSPATH);
+	// m, err := parseFeedsFile(FEEDSPATH);
+
+	c, err := decodeConfig();
 	if err != nil {
 		return "", err;
 	}
@@ -128,16 +130,15 @@ func updateCommand(command []string) (string, error) {
 	//arg := strings.TrimSpace(command[1]);
 
 	// do paralelization here
-	var updatedCounter int;
-	for _,v := range m {
-		dbFeed, err := SqlGetFeed(db, v);
+	for _,v := range c.Feeds {
+		dbFeed, err := SqlGetFeed(db, v.Url);
 		if err != nil && err != sql.ErrNoRows {
 			return "", err;
 		}
 
 		found := err == sql.ErrNoRows;
 
-		feed, err := getFeedFromWeb(v);
+		feed, err := getFeedFromWeb(v.Url);
 		if err != nil {
 			return "", err;
 		}
@@ -161,10 +162,9 @@ func updateCommand(command []string) (string, error) {
 		if err != nil {
 			return "", err;
 		}
-		updatedCounter++;
 	}
 
-	return fmt.Sprintf("%v feeds updated", updatedCounter), nil;
+	return "feeds are updated", nil;
 }
 
 func changeRead(stringId string, read bool) (int64, error) {

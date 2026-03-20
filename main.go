@@ -25,9 +25,6 @@ type Item struct {
 	Url string
 }
 
-// migrate this to a config file.
-const FEEDSPATH = "./feeds.txt";
-
 func main() {
 	os.Remove("/tmp/rssd.sock");
 
