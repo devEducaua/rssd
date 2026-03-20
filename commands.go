@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -44,6 +45,9 @@ func parseCommand(command string) Response {
 		case "FIND":
 			findIds, err = findCommand(parts);
 			r.Response = findIds;
+		case "OPEN":
+			msg, err = openCommand(parts);
+			r.Response = msg;
 		default:
 			err = fmt.Errorf("command: %v doesn't exists", parts[0]);
 	}
@@ -84,7 +88,18 @@ func getCommand(command []string) ([]ItemDB, error) {
 	case "READ":
 		items, err = SqlGetItemsByRead(db, true, limit);
 	default:
-		items, err = SqlGetItemsByName(db, arg, limit);
+		id, err := strconv.ParseInt(arg, 10, 64);
+
+		if err != nil {
+			items, err = SqlGetItemsByName(db, arg, limit);
+
+		} else {
+			// TODO: return just the item without array
+			var item ItemDB;
+			item, err = SqlGetItem(db, id);
+			items = []ItemDB{item};
+			fmt.Println(items);
+		}
 	}
 
 	if err != nil {
@@ -149,7 +164,7 @@ func updateCommand(command []string) (string, error) {
 		updatedCounter++;
 	}
 
-	return fmt.Sprintf("%v items updated", updatedCounter), nil;
+	return fmt.Sprintf("%v feeds updated", updatedCounter), nil;
 }
 
 func changeRead(stringId string, read bool) (int64, error) {
@@ -246,5 +261,22 @@ func findCommand(command []string) ([]int64, error) {
 	}
 
 	return ids, nil;
+}
+
+func openCommand(command []string) (string, error) {
+	if len(command) < 2 {
+		return "", fmt.Errorf("invalid syntax on the `OPEN` command: `OPEN` only accepts one arguments");
+	}
+
+	url := strings.TrimSpace(command[1]);
+
+	cmd := exec.Command("xdg-open", url);
+
+	err := cmd.Run();
+	if err != nil {
+		return "", err;
+	}
+
+	return "external program finished", nil;
 }
 

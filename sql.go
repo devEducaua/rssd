@@ -141,6 +141,17 @@ func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
     return items, nil;
 }
 
+func SqlGetItem(db *sql.DB, id int64) (ItemDB, error) {
+    row := db.QueryRow("SELECT id, title, content, updated, url, read FROM items WHERE id=?", id);
+
+	var item ItemDB;
+    err := row.Scan(&item.Id, &item.Title, &item.Content, &item.Updated, &item.Url, &item.Read);
+    if err != nil {
+        return ItemDB{}, err;
+    }
+	return item, nil;
+}
+
 func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
     text = "%" + text + "%";
     rows, err := db.Query("SELECT id FROM items WHERE title LIKE ? OR url LIKE ? OR content LIKE ? LIMIT ?", text, text, text, limit);

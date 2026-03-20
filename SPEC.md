@@ -10,7 +10,7 @@ a request can only contain spaces if the are surrounded with quotes.
 GET
 - description: get a list of items.
 - argument: source
-- argument description: source can be ALL, READ, UNREAD or a feedname.
+- argument description: source can be ALL, READ, UNREAD, a item id or a feedname.
 - optional argument: limit
 
 READ
@@ -33,6 +33,10 @@ FIND
 - arguments: text
 - argument description: a text that is on the attributes of the item.
 - optional argument: limit
+
+OPEN
+- description: open the item in the default application 
+- arguments: url
 
 ## responses
 the responses are in json, and have the obrigatory status attribute.
