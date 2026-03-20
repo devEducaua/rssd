@@ -110,49 +110,46 @@ func updateCommand(command []string) (string, error) {
 		return "", err;
 	}
 
-	arg := strings.TrimSpace(command[1]);
+	//arg := strings.TrimSpace(command[1]);
 
-	// TODO: handle ALL and feedname options
+	// do paralelization here
+	var updatedCounter int;
+	for _,v := range m {
+		dbFeed, err := SqlGetFeed(db, v);
+		if err != nil && err != sql.ErrNoRows {
+			return "", err;
+		}
 
-	// TODO: fix this because it really sucks
-	if arg == "ALL" {
-		for _,v := range m {
-			dbFeed, err := SqlGetFeed(db, v);
-			if err != nil && err != sql.ErrNoRows {
-				return "", err;
-			}
-			feed, err := getFeedFromWeb(v);
+		found := err == sql.ErrNoRows;
+
+		feed, err := getFeedFromWeb(v);
+		if err != nil {
+			return "", err;
+		}
+
+		var saveId int64;
+		if !found {
+			id, err := SqlSaveFeed(db, feed);
 			if err != nil {
 				return "", err;
 			}
-
-			if err == sql.ErrNoRows {
-
-				id, err := SqlSaveFeed(db, feed);
-				if err != nil {
-					return "", err;
-				}
-
-				err = SqlSaveFeedItems(db, feed.Items, id);
-				if err != nil {
-					return "", err;
-				}
-
-			} else {
-				err := SqlUpdateFeed(db, feed, dbFeed.Id);
-				if err != nil {
-					return "", err;
-				}
-
-				err = SqlSaveFeedItems(db, feed.Items, dbFeed.Id);
-				if err != nil {
-					return "", err;
-				}
+			saveId = id;
+		} else {
+			err := SqlUpdateFeed(db, feed, dbFeed.Id);
+			if err != nil {
+				return "", err;
 			}
+			saveId = dbFeed.Id;
 		}
+
+		err = SqlSaveFeedItems(db, feed.Items, saveId);
+		if err != nil {
+			return "", err;
+		}
+		updatedCounter++;
 	}
 
-	return fmt.Sprintf("the database was updated"), nil;
+	return fmt.Sprintf("%v items updated", updatedCounter), nil;
 }
 
 func changeRead(stringId string, read bool) (int64, error) {
