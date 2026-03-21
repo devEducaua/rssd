@@ -61,14 +61,14 @@ func parseCommand(command string) Response {
 }
 
 func getCommand(command []string) ([]ItemDB, error) {
-	if len(command) != 2 {
-		return nil, fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
+	if len(command) < 2 {
+		return nil, fmt.Errorf("invalid syntax on the `GET` command: `GET` needs one argument");
 	}
 
 	var limit int64 = 100;
-	// if len(command) == 3 {
-	// 	limit, _ = strconv.ParseInt(command[2], 10, 64);
-	// }
+	if len(command) == 3 {
+		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
+	}
 
 	arg := strings.TrimSpace(command[1]);
 
@@ -121,11 +121,7 @@ func updateCommand(command []string) (string, error) {
 	defer db.Close();
 
 	// m, err := parseFeedsFile(FEEDSPATH);
-
-	c, err := decodeConfig();
-	if err != nil {
-		return "", err;
-	}
+	c := getConfig();
 
 	//arg := strings.TrimSpace(command[1]);
 
