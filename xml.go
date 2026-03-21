@@ -105,7 +105,6 @@ func atomToGenericForm(xmlFile string) (Feed, error) {
     feed := Feed{
         Url: atom.Id,
         Title: atom.Title,
-		Name: atom.Title,
         Description: atom.Subtitle,
         Items: items,
     }
