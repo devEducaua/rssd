@@ -26,14 +26,32 @@ type Item struct {
 }
 
 func main() {
-	os.Remove("/tmp/rssd.sock");
+	c := getConfig();
 
-	// TODO: add option to choose between unixsockets and tcp
-	listener, err := net.Listen("unix", "/tmp/rssd.sock");
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: on listening: %v\n", err);
-		os.Exit(1);
+	config := c.Config;
+
+	var listener net.Listener;
+	var err error;
+
+	if config.Method == "unix" {
+		os.Remove(config.UnixPath);
+
+		listener, err = net.Listen("unix", config.UnixPath);
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: on listening on unix: %v\n", err);
+			os.Exit(1);
+		}
 	}
+
+	if config.Method == "tcp" {
+		port := fmt.Sprintf(":%v", config.TcpPort);
+		listener, err = net.Listen("tcp", port);
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: on listening on tcp with port: %v: %v\n", port, err);
+			os.Exit(1);
+		}
+	}
+
 	defer listener.Close();
 
 	db, err := SqlConnect();
@@ -53,8 +71,7 @@ func main() {
 	for {
 		conn, err := listener.Accept();
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: on listening: %v\n", err);
-			os.Exit(1);
+			fmt.Fprintf(os.Stderr, "ERROR: on accepting: %v\n", err);
 		}
 
 		go handleConnection(conn);
@@ -85,4 +102,5 @@ func handleConnection(conn net.Conn) {
 
 	fmt.Fprintf(conn, string(b));
 }
+
 
