@@ -16,7 +16,7 @@ type ConfigFile struct {
 	Method string
 	UnixPath string
 	TcpPort int
-	QueryLimit int
+	QueryLimit int64
 	ReloadTime int
 }
 
@@ -82,7 +82,7 @@ func parseConfig() (ConfigFile, error) {
 				c.UnixPath = "";
 
 			case "default-query-limit":
-				converted, err := strconv.Atoi(value);
+				converted, err := strconv.ParseInt(value, 10, 64);
 				if err != nil {
 					return ConfigFile{}, err;
 				}

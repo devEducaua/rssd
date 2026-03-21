@@ -13,6 +13,8 @@ type Response struct {
 	Response interface{} `json:"response"`
 }
 
+var CONFIG = getConfig();
+
 func parseCommand(command string) Response {
 	parts := strings.Split(command, " ");
 
@@ -65,7 +67,7 @@ func getCommand(command []string) ([]ItemDB, error) {
 		return nil, fmt.Errorf("invalid syntax on the `GET` command: `GET` needs one argument");
 	}
 
-	var limit int64 = 100;
+	var limit int64 = CONFIG.Config.QueryLimit;
 	if len(command) == 3 {
 		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
 	}
@@ -120,13 +122,8 @@ func updateCommand(command []string) (string, error) {
 	}
 	defer db.Close();
 
-	// m, err := parseFeedsFile(FEEDSPATH);
-	c := getConfig();
-
-	//arg := strings.TrimSpace(command[1]);
-
 	// do paralelization here
-	for _,v := range c.Feeds {
+	for _,v := range CONFIG.Feeds {
 		dbFeed, err := SqlGetFeed(db, v.Url);
 		if err != nil && err != sql.ErrNoRows {
 			return "", err;
@@ -240,7 +237,7 @@ func findCommand(command []string) ([]int64, error) {
 		return nil, fmt.Errorf("invalid syntax on the `FIND` command: `FIND` only accepts two arguments");
 	}
 
-	var limit int64 = 3;
+	var limit int64 = CONFIG.Config.QueryLimit;
 	if len(command) == 3 {
 		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
 	}
