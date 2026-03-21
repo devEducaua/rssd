@@ -1,0 +1,4 @@
+method: unix
+unix-path: /tmp/rssd.sock
+reload-time: 25
+default-query-limit: 100

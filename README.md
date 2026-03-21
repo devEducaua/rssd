@@ -14,4 +14,5 @@ dependencies:
 - optimize update command
 - config file
 - tcp option
+- ompl export
 - other protocol feeds support: gopher, gemini, spartan
