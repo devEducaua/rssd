@@ -12,6 +12,7 @@ type ItemDB struct {
     Content string
     Read bool
     Url string
+	FeedId int64
 }
 
 type FeedDB struct {
@@ -93,7 +94,7 @@ func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, que
     var items []ItemDB;
     for rows.Next() {
         var it ItemDB;
-        if err := rows.Scan(&it.Id, &it.Url, &it.Title, &it.Updated, &it.Content, &it.Read); err != nil {
+        if err := rows.Scan(&it.Id, &it.Url, &it.Title, &it.Updated, &it.Content, &it.Read, &it.FeedId); err != nil {
             return nil, err;    
         }
         items = append(items, it);
@@ -107,7 +108,7 @@ func SqlGetAllItemsAttributesByCustom(db *sql.DB, limit int64, query string, que
 }
 
 func SqlGetAllItems(db *sql.DB, limit int64) ([]ItemDB, error) {
-    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items LIMIT ?", limit);
+    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read, feed_id FROM items LIMIT ?", limit);
     if err != nil {
         return nil, err;
     }
@@ -115,7 +116,7 @@ func SqlGetAllItems(db *sql.DB, limit int64) ([]ItemDB, error) {
 }
 
 func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
-    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items WHERE read=? LIMIT ?", read, limit);
+    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read, feed_id FROM items WHERE read=? LIMIT ?", read, limit);
 
     if err != nil {
         return nil, err;
@@ -133,7 +134,7 @@ func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
         return nil, err;
     }
     
-    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read FROM items WHERE feed_id=? LIMIT ?", id, limit);
+    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read, feed_id FROM items WHERE feed_id=? LIMIT ?", id, limit);
     
     if err != nil {
         return nil, err;
@@ -142,10 +143,10 @@ func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
 }
 
 func SqlGetItem(db *sql.DB, id int64) (ItemDB, error) {
-    row := db.QueryRow("SELECT id, title, content, updated, url, read FROM items WHERE id=?", id);
+    row := db.QueryRow("SELECT id, title, content, updated, url, read, feed_id FROM items WHERE id=?", id);
 
 	var item ItemDB;
-    err := row.Scan(&item.Id, &item.Title, &item.Content, &item.Updated, &item.Url, &item.Read);
+    err := row.Scan(&item.Id, &item.Title, &item.Content, &item.Updated, &item.Url, &item.Read, &item.FeedId);
     if err != nil {
         return ItemDB{}, err;
     }
