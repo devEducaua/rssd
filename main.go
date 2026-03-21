@@ -30,30 +30,6 @@ func main() {
 
 	config := c.Config;
 
-	var listener net.Listener;
-	var err error;
-
-	if config.Method == "unix" {
-		os.Remove(config.UnixPath);
-
-		listener, err = net.Listen("unix", config.UnixPath);
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: on listening on unix: %v\n", err);
-			os.Exit(1);
-		}
-	}
-
-	if config.Method == "tcp" {
-		port := fmt.Sprintf(":%v", config.TcpPort);
-		listener, err = net.Listen("tcp", port);
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: on listening on tcp with port: %v: %v\n", port, err);
-			os.Exit(1);
-		}
-	}
-
-	defer listener.Close();
-
 	db, err := SqlConnect();
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: on connecting to the database: %v\n", err);
@@ -65,9 +41,33 @@ func main() {
 		fmt.Fprintf(os.Stderr, "ERROR: on creating tables: %v\n", err);
 		os.Exit(1);
 	}
-
 	db.Close();
 
+	var listener net.Listener;
+
+	if config.Method == "unix" {
+		os.Remove(config.UnixPath);
+
+		var err error;
+		listener, err = net.Listen("unix", config.UnixPath);
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: on listening on unix: %v\n", err);
+			os.Exit(1);
+		}
+	}
+
+	if config.Method == "tcp" {
+		var err error;
+
+		port := fmt.Sprintf(":%v", config.TcpPort);
+		listener, err = net.Listen("tcp", port);
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: on listening on tcp with port: %v: %v\n", port, err);
+			os.Exit(1);
+		}
+	}
+
+	defer listener.Close();
 	for {
 		conn, err := listener.Accept();
 		if err != nil {
