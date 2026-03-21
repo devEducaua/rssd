@@ -7,6 +7,9 @@ import (
 	"strconv"
 )
 
+// change to $XDG_CONFIG_HOME/rssd/
+const CONFIGDIR = "./defaults";
+
 type FeedFile struct {
 	Name string
 	Url string
@@ -41,8 +44,7 @@ func getConfig() Config {
 }
 
 func parseConfig() (ConfigFile, error) {
-	// change to $XDG_CONFIG_HOME/rssd
-	var path = "./examples/config";
+	var path = fmt.Sprintf("%v/config", CONFIGDIR);
 
 	cont, err := readFile(path);
 	if err != nil {
@@ -105,8 +107,7 @@ func parseConfig() (ConfigFile, error) {
 }
 
 func parseFeed() ([]FeedFile, error) {
-	// change to $XDG_CONFIG_HOME/rssd/
-	var path = "./examples/feeds";
+	var path = fmt.Sprintf("%v/feeds", CONFIGDIR);
 
 	cont, err := readFile(path);
 	if err != nil {
