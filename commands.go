@@ -100,7 +100,6 @@ func getCommand(command []string) ([]ItemDB, error) {
 			var item ItemDB;
 			item, err = SqlGetItem(db, id);
 			items = []ItemDB{item};
-			fmt.Println(items);
 		}
 	}
 
@@ -129,15 +128,17 @@ func updateCommand(command []string) (string, error) {
 			return "", err;
 		}
 
-		found := err == sql.ErrNoRows;
+		notFound := err == sql.ErrNoRows;
 
 		feed, err := getFeedFromWeb(v.Url);
 		if err != nil {
 			return "", err;
 		}
 
+		feed.Name = v.Name;
+
 		var saveId int64;
-		if !found {
+		if notFound {
 			id, err := SqlSaveFeed(db, feed);
 			if err != nil {
 				return "", err;
@@ -148,6 +149,7 @@ func updateCommand(command []string) (string, error) {
 			if err != nil {
 				return "", err;
 			}
+
 			saveId = dbFeed.Id;
 		}
 
@@ -261,11 +263,27 @@ func openCommand(command []string) (string, error) {
 		return "", fmt.Errorf("invalid syntax on the `OPEN` command: `OPEN` only accepts one arguments");
 	}
 
-	url := strings.TrimSpace(command[1]);
+	arg := strings.TrimSpace(command[1]);
 
-	cmd := exec.Command("xdg-open", url);
+	id, err := strconv.ParseInt(arg, 10, 64);
+	if err != nil {
+		return "", err;
+	}
 
-	err := cmd.Run();
+	db, err := SqlConnect();
+	if err != nil {
+		return "", err;
+	}
+	defer db.Close();
+
+	item, err := SqlGetItem(db, id);
+	if err != nil {
+		return "", err;
+	}
+
+	cmd := exec.Command("xdg-open", item.Url);
+
+	err = cmd.Run();
 	if err != nil {
 		return "", err;
 	}

@@ -36,7 +36,7 @@ FIND
 
 OPEN
 - description: open the item in the default application 
-- arguments: url
+- arguments: id
 
 ## responses
 the responses are in json, and have the obrigatory status attribute.

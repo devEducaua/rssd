@@ -11,8 +11,8 @@ dependencies:
 
 # TODO
 
+- support rss (now only supports atom)
 - optimize update command
-- config file
-- tcp option
-- ompl export
+- ompl import-export
 - other protocol feeds support: gopher, gemini, spartan
+- some podcast support
