@@ -1,8 +1,10 @@
 package main
 
 import (
-    "database/sql"
-    _ "modernc.org/sqlite"
+	"database/sql"
+	"fmt"
+
+	_ "modernc.org/sqlite"
 )
 
 type ItemDB struct {
@@ -38,10 +40,9 @@ func SqlCreateTablesIfNotExists(db *sql.DB) error {
         CREATE TABLE IF NOT EXISTS feeds (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            custom_name TEXT NOT NULL,
-            url TEXT NOT NULL,
-            description TEXT NOT NULL,
-            UNIQUE(url, custom_name)
+            custom_name TEXT NOT NULL UNIQUE,
+            url TEXT NOT NULL UNIQUE,
+            description TEXT NOT NULL
         )
     `)
     if err != nil {
@@ -66,6 +67,18 @@ func SqlCreateTablesIfNotExists(db *sql.DB) error {
     }
 
     return nil;
+}
+
+func SqlGetFeed(db *sql.DB, url string) (FeedDB, error) {
+    row := db.QueryRow("SELECT id, title, custom_name, url, description FROM feeds WHERE url=?", url);
+    var f FeedDB;
+    err := row.Scan(&f.Id, &f.Title, &f.Name, &f.Url, &f.Description);
+
+    if err != nil {
+        return FeedDB{}, err;
+    }
+    
+    return f, nil;
 }
 
 func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
@@ -176,27 +189,20 @@ func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
     return ids, nil;
 }
 
-func SqlUpdateFeed(db *sql.DB, feed Feed, feedId int64) error {
-    _, err := db.Exec("UPDATE feeds SET title=?, custom_name=?, description=? WHERE id=?", feed.Title, feed.Name, feed.Description, feedId);
-    if err != nil {
-        return err;
-    }
+func SqlUpsertFeed(db *sql.DB, feed Feed) (int64, error) {
+    _, err := db.Exec("INSERT INTO feeds (title, custom_name, description, url) VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET title=excluded.title, description=excluded.description, custom_name=excluded.custom_name", 
+		feed.Title, feed.Name, feed.Description, feed.Url);
 
-    return nil;
-}
+	if err != nil {
+		return -1, fmt.Errorf("failed on upsert: %v", err);
+	}
 
-func SqlSaveFeed(db *sql.DB, feed Feed) (int64, error) {
-    result, err := db.Exec("INSERT INTO feeds (title, custom_name, description, url) VALUES (?, ?, ?, ?)", feed.Title, feed.Name, feed.Description, feed.Url);
-    if err != nil {
-        return -1, err;
-    }
+	feedQuery, err := SqlGetFeed(db, feed.Url);
+	if err != nil {
+		return -1, fmt.Errorf("failed to get feed on upsert: %v", err);
+	}
 
-    id, err := result.LastInsertId();
-    if err != nil {
-        return -1, err;
-    }
-
-    return id, nil;
+	return feedQuery.Id, nil;
 }
 
 func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
@@ -207,17 +213,5 @@ func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
         }
     }
     return nil;
-}
-
-func SqlGetFeed(db *sql.DB, url string) (FeedDB, error) {
-    row := db.QueryRow("SELECT id, title, custom_name, url, description FROM feeds WHERE url=?", url);
-    var f FeedDB;
-    err := row.Scan(&f.Id, &f.Title, &f.Name, &f.Url, &f.Description);
-
-    if err != nil {
-        return FeedDB{}, err;
-    }
-    
-    return f, nil;
 }
 
