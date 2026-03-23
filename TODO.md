@@ -1,6 +1,5 @@
 # TODO
 
-- option for feedname on update command
 - default config file
 - support rss (now only supports atom)
 - optimize update command

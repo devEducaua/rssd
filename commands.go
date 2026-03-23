@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -91,6 +92,7 @@ func getCommand(command []string) ([]ItemDB, error) {
 	default:
 		id, err := strconv.ParseInt(arg, 10, 64);
 
+		// TODO: refactor this to 2 separate functions
 		if err != nil {
 			items, err = SqlGetItemsByName(db, arg, limit);
 
@@ -120,27 +122,58 @@ func updateCommand(command []string) (string, error) {
 	}
 	defer db.Close();
 
+	arg := strings.TrimSpace(command[1]);
+
 	// do paralelization here
-	for _,v := range CONFIG.Feeds {
-		feed, err := getFeedFromWeb(v.Url);
-		if err != nil {
-			return "", err;
+	if arg == "ALL" {
+		for _,v := range CONFIG.Feeds {
+			err := updateOneFeed(db, v.Name, v.Url);
+			if err != nil {
+				return "", err;
+			}
+		}
+	} else {
+
+		// TODO: turn CONFIG.feeds on a hash map to better performance
+		var feedUrl string;
+		for _,v := range CONFIG.Feeds {
+			if v.Name == arg {
+				feedUrl = v.Url;
+			}
 		}
 
-		feed.Name = v.Name;
-
-		id, err := SqlUpsertFeed(db, feed, );
-		if err != nil {
-			return "", err;
+		if feedUrl == "" {
+			return "", fmt.Errorf("feeds name not found: `%v`", arg);
 		}
 
-		err = SqlSaveFeedItems(db, feed.Items, id);
+		err = updateOneFeed(db, arg, feedUrl);
 		if err != nil {
 			return "", err;
 		}
 	}
 
 	return "feeds are updated", nil;
+}
+
+func updateOneFeed(db *sql.DB, name string, url string) error {
+	feed, err := getFeedFromWeb(url);
+	if err != nil {
+		return err;
+	}
+
+	feed.Name = name;
+
+	id, err := SqlUpsertFeed(db, feed);
+	if err != nil {
+		return err;
+	}
+
+	err = SqlSaveFeedItems(db, feed.Items, id);
+	if err != nil {
+		return err;
+	}
+
+	return nil;
 }
 
 func changeRead(stringId string, read bool) (int64, error) {
