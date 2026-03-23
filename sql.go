@@ -81,13 +81,22 @@ func SqlGetFeed(db *sql.DB, url string) (FeedDB, error) {
     return f, nil;
 }
 
-func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
-    _, err := db.Exec("UPDATE items SET read=? WHERE id=?", read, id);
-    if err != nil {
-        return err;
-    }
-    return nil;
+func SqlUpsertFeed(db *sql.DB, feed Feed) (int64, error) {
+    _, err := db.Exec("INSERT INTO feeds (title, custom_name, description, url) VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET title=excluded.title, description=excluded.description, custom_name=excluded.custom_name", 
+		feed.Title, feed.Name, feed.Description, feed.Url);
+
+	if err != nil {
+		return -1, fmt.Errorf("failed on upsert: %v", err);
+	}
+
+	feedQuery, err := SqlGetFeed(db, feed.Url);
+	if err != nil {
+		return -1, fmt.Errorf("failed to get feed on upsert: %v", err);
+	}
+
+	return feedQuery.Id, nil;
 }
+
 
 func SqlDeleteFeed(db *sql.DB, id int64) error {
     _, err := db.Exec("DELETE FROM feeds WHERE id=?", id);
@@ -95,6 +104,45 @@ func SqlDeleteFeed(db *sql.DB, id int64) error {
         return err;
     }
     return nil;
+}
+
+func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
+    for _,it := range items {
+        _, err := db.Exec("INSERT OR IGNORE INTO items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
+        if err != nil {
+            return err;
+        }
+    }
+    return nil;
+}
+
+func SqlGetItem(db *sql.DB, id int64) (ItemDB, error) {
+    row := db.QueryRow("SELECT id, title, content, updated, url, read, feed_id FROM items WHERE id=?", id);
+
+	var item ItemDB;
+    err := row.Scan(&item.Id, &item.Title, &item.Content, &item.Updated, &item.Url, &item.Read, &item.FeedId);
+    if err != nil {
+        return ItemDB{}, err;
+    }
+	return item, nil;
+}
+
+func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
+    row := db.QueryRow("SELECT id FROM feeds WHERE custom_name=?", name);
+
+    var id int64;
+
+    err := row.Scan(&id);
+    if err != nil {
+        return nil, err;
+    }
+    
+    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read, feed_id FROM items WHERE feed_id=? LIMIT ?", id, limit);
+    
+    if err != nil {
+        return nil, err;
+    }
+    return items, nil;
 }
 
 // TODO: find a better to this function
@@ -137,35 +185,6 @@ func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
     return items, nil;
 }
 
-func SqlGetItemsByName(db *sql.DB, name string, limit int64) ([]ItemDB, error) {
-    row := db.QueryRow("SELECT id FROM feeds WHERE custom_name=?", name);
-
-    var id int64;
-
-    err := row.Scan(&id);
-    if err != nil {
-        return nil, err;
-    }
-    
-    items, err := SqlGetAllItemsAttributesByCustom(db, limit, "SELECT id, url, title, updated, content, read, feed_id FROM items WHERE feed_id=? LIMIT ?", id, limit);
-    
-    if err != nil {
-        return nil, err;
-    }
-    return items, nil;
-}
-
-func SqlGetItem(db *sql.DB, id int64) (ItemDB, error) {
-    row := db.QueryRow("SELECT id, title, content, updated, url, read, feed_id FROM items WHERE id=?", id);
-
-	var item ItemDB;
-    err := row.Scan(&item.Id, &item.Title, &item.Content, &item.Updated, &item.Url, &item.Read, &item.FeedId);
-    if err != nil {
-        return ItemDB{}, err;
-    }
-	return item, nil;
-}
-
 func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
     text = "%" + text + "%";
     rows, err := db.Query("SELECT id FROM items WHERE title LIKE ? OR url LIKE ? OR content LIKE ? LIMIT ?", text, text, text, limit);
@@ -189,28 +208,10 @@ func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
     return ids, nil;
 }
 
-func SqlUpsertFeed(db *sql.DB, feed Feed) (int64, error) {
-    _, err := db.Exec("INSERT INTO feeds (title, custom_name, description, url) VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET title=excluded.title, description=excluded.description, custom_name=excluded.custom_name", 
-		feed.Title, feed.Name, feed.Description, feed.Url);
-
-	if err != nil {
-		return -1, fmt.Errorf("failed on upsert: %v", err);
-	}
-
-	feedQuery, err := SqlGetFeed(db, feed.Url);
-	if err != nil {
-		return -1, fmt.Errorf("failed to get feed on upsert: %v", err);
-	}
-
-	return feedQuery.Id, nil;
-}
-
-func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
-    for _,it := range items {
-        _, err := db.Exec("INSERT OR IGNORE INTO items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
-        if err != nil {
-            return err;
-        }
+func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
+    _, err := db.Exec("UPDATE items SET read=? WHERE id=?", read, id);
+    if err != nil {
+        return err;
     }
     return nil;
 }
