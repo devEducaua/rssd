@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -10,7 +9,7 @@ import (
 
 type Response struct {
 	Status string `json:"status"`
-	Response interface{} `json:"response"`
+	Response any `json:"response"`
 }
 
 var CONFIG = getConfig();
@@ -123,13 +122,6 @@ func updateCommand(command []string) (string, error) {
 
 	// do paralelization here
 	for _,v := range CONFIG.Feeds {
-		dbFeed, err := SqlGetFeed(db, v.Url);
-		if err != nil && err != sql.ErrNoRows {
-			return "", err;
-		}
-
-		notFound := err == sql.ErrNoRows;
-
 		feed, err := getFeedFromWeb(v.Url);
 		if err != nil {
 			return "", err;
@@ -137,23 +129,12 @@ func updateCommand(command []string) (string, error) {
 
 		feed.Name = v.Name;
 
-		var saveId int64;
-		if notFound {
-			id, err := SqlSaveFeed(db, feed);
-			if err != nil {
-				return "", err;
-			}
-			saveId = id;
-		} else {
-			err := SqlUpdateFeed(db, feed, dbFeed.Id);
-			if err != nil {
-				return "", err;
-			}
-
-			saveId = dbFeed.Id;
+		id, err := SqlUpsertFeed(db, feed, );
+		if err != nil {
+			return "", err;
 		}
 
-		err = SqlSaveFeedItems(db, feed.Items, saveId);
+		err = SqlSaveFeedItems(db, feed.Items, id);
 		if err != nil {
 			return "", err;
 		}
