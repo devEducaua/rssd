@@ -5,10 +5,8 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
+	"path/filepath"
 )
-
-// change to $XDG_CONFIG_HOME/rssd/
-const CONFIGDIR = "./defaults";
 
 type FeedFile struct {
 	Name string
@@ -23,18 +21,26 @@ type ConfigFile struct {
 	ReloadTime int
 }
 
+// TODO: change this names
 type Config struct {
 	Config ConfigFile
 	Feeds []FeedFile
 }
 
 func getConfig() Config {
+	//defaultConfig := ConfigFile{
+	//	Method: "unix",
+	//	UnixPath: "/tmp/rssd.sock",
+	//	QueryLimit: 100,
+	//	ReloadTime: 25,
+	//}
+
 	config, err := parseConfig();
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error());
 		os.Exit(1);
 	}
-	feeds, err := parseFeed();
+	feeds, err := parseFeeds();
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error());
 		os.Exit(1);
@@ -44,7 +50,12 @@ func getConfig() Config {
 }
 
 func parseConfig() (ConfigFile, error) {
-	var path = fmt.Sprintf("%v/config", CONFIGDIR);
+	baseDir, err := getBaseDir();
+	if err != nil {
+		return ConfigFile{}, err;
+	}
+
+	var path = filepath.Join(baseDir, "config");
 
 	cont, err := readFile(path);
 	if err != nil {
@@ -106,8 +117,13 @@ func parseConfig() (ConfigFile, error) {
 	return c, nil;
 }
 
-func parseFeed() ([]FeedFile, error) {
-	var path = fmt.Sprintf("%v/feeds", CONFIGDIR);
+func parseFeeds() ([]FeedFile, error) {
+	baseDir, err := getBaseDir();
+	if err != nil {
+		return nil, err;
+	}
+
+	var path = filepath.Join(baseDir, "feeds");
 
 	cont, err := readFile(path);
 	if err != nil {
@@ -116,8 +132,8 @@ func parseFeed() ([]FeedFile, error) {
 
 	var feeds []FeedFile;
 
-	lines := strings.Split(cont, "\n");
-	for _,l := range lines {
+	lines := strings.SplitSeq(cont, "\n");
+	for l := range lines {
 		if l != "" {
 			var f FeedFile;
 			parts := strings.SplitN(l, " ", 2);
@@ -129,6 +145,26 @@ func parseFeed() ([]FeedFile, error) {
 
 	return feeds, nil;
 }
+
+func getBaseDir() (string, error) {
+	//home, err := os.UserHomeDir();
+	//if err != nil {
+	//	return "", err;
+	//}
+
+	//path := filepath.Join(home, ".config", "rssd");
+
+	path := "./defaults";
+
+	err := os.MkdirAll(path, 0755);
+	if err != nil {
+		return "", err;
+	}
+
+	return path, nil;
+}
+
+
 
 func readFile(path string) (string, error) {
 	dat, err := os.ReadFile(path);
