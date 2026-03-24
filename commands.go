@@ -13,8 +13,6 @@ type Response struct {
 	Response any `json:"response"`
 }
 
-var CONFIG = getConfig();
-
 func parseCommand(command string) Response {
 	parts := strings.Split(command, " ");
 
@@ -67,7 +65,12 @@ func getCommand(command []string) ([]ItemDB, error) {
 		return nil, fmt.Errorf("invalid syntax on the `GET` command: `GET` needs one argument");
 	}
 
-	var limit int64 = CONFIG.Config.QueryLimit;
+	config, err := getConfig();
+	if err != nil {
+		return nil, err;
+	}
+
+	var limit int64 = config.QueryLimit;
 	if len(command) == 3 {
 		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
 	}
@@ -124,9 +127,15 @@ func updateCommand(command []string) (string, error) {
 
 	arg := strings.TrimSpace(command[1]);
 
+	feeds, err := getFeedsConfig();
+	if err != nil {
+
+		return "", err;
+	}
+
 	// do paralelization here
 	if arg == "ALL" {
-		for _,v := range CONFIG.Feeds {
+		for _,v := range feeds {
 			err := updateOneFeed(db, v.Name, v.Url);
 			if err != nil {
 				return "", err;
@@ -136,7 +145,7 @@ func updateCommand(command []string) (string, error) {
 
 		// TODO: turn CONFIG.feeds on a hash map to better performance
 		var feedUrl string;
-		for _,v := range CONFIG.Feeds {
+		for _,v := range feeds {
 			if v.Name == arg {
 				feedUrl = v.Url;
 			}
@@ -253,7 +262,12 @@ func findCommand(command []string) ([]int64, error) {
 		return nil, fmt.Errorf("invalid syntax on the `FIND` command: `FIND` only accepts two arguments");
 	}
 
-	var limit int64 = CONFIG.Config.QueryLimit;
+	config, err := getConfig();
+	if err != nil {
+		return nil, err;
+	}
+
+	var limit int64 = config.QueryLimit;
 	if len(command) == 3 {
 		limit, _ = strconv.ParseInt(strings.TrimSpace(command[2]), 10, 64);
 	}

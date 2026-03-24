@@ -1,4 +1,4 @@
-method: unix
-unix-path: /tmp/rssd.sock
-reload-time: 25
-default-query-limit: 100
+method: tcp
+tcp-port: 5600
+#unix-path: /tmp/rssd.sock
+query-limit: 100

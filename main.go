@@ -26,9 +26,11 @@ type Item struct {
 }
 
 func main() {
-	c := getConfig();
-
-	config := c.Config;
+	config, err := getConfig();
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err);
+		os.Exit(1);
+	}
 
 	db, err := SqlConnect();
 	if err != nil {

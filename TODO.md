@@ -1,6 +1,5 @@
 # TODO
 
-- default config file
 - support rss (now only supports atom)
 - optimize update command
 - opml import-export
