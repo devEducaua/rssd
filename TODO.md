@@ -1,5 +1,6 @@
 # TODO
 
+- fix problem with links and urls in xml
 - support rss (now only supports atom)
 - optimize update command
 - opml import-export
