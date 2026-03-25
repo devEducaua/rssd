@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type XmlAtomFeed struct {
@@ -27,14 +28,14 @@ type XmlRss struct {
 }
 
 type XmlRssFeed struct {
-    Id string `xml:"id"`
+    Link string `xml:"link"`
     Title string `xml:"title"`
     Description string `xml:"description"`
     Items []XmlRssItem `xml:"item"`
 }
 
 type XmlRssItem struct {
-    Id string `xml:"id"`
+    GuId string `xml:"guid"`
     Title string `xml:"title"`
     PubDate string `xml:"pubDate"`
     Description string `xml:"description"`
@@ -56,8 +57,23 @@ func getFeedFromWeb(feedUrl string) (Feed, error) {
 		return Feed{}, fmt.Errorf("not supported scheme");
 	}
 
-	// TODO: support RSS
-	feed, err := atomToGenericForm(rawXml);
+	// ftype, err := getFeedType(rawXml);
+	// if err != nil {
+	// 	return Feed{}, err;
+	// }
+
+	var feed Feed;
+
+	//switch ftype {
+	//case "rss":
+	//	feed, err = rssToGenericForm(rawXml);
+	//case "feed":
+	//	feed, err = atomToGenericForm(rawXml);
+	//default:
+	//	return Feed{}, fmt.Errorf("failed to parse the feed");
+	//}
+
+	feed, err = atomToGenericForm(rawXml);
 	if err != nil {
 		return Feed{}, nil;
 	}
@@ -82,6 +98,29 @@ func httpRequest(url string) (string, error) {
 
 func geminiRequest(url string) (string, error) {
 	panic("TODO: implement gemini requests");
+}
+
+func getFeedType(rawXml string) (string, error) {
+	var feedType string;
+
+	decoder := xml.NewDecoder(strings.NewReader(rawXml));
+    for {
+        token, err := decoder.Token();
+        if err == io.EOF {
+            break;
+        }
+        if err != nil {
+            return "", err;
+        }
+
+        start, ok := token.(xml.StartElement)
+        if ok {
+		feedType = start.Name.Local;
+			break;
+        }
+    }
+
+	return feedType, nil;
 }
 
 func atomToGenericForm(xmlFile string) (Feed, error) {
@@ -111,3 +150,32 @@ func atomToGenericForm(xmlFile string) (Feed, error) {
 
     return feed, nil;
 }
+
+func rssToGenericForm(xmlFile string) (Feed, error) {
+    var rss XmlRss;
+
+    err := xml.Unmarshal([]byte(xmlFile), &rss);
+    if err != nil {
+        return Feed{}, fmt.Errorf("ERROR: could not parse the atom file: %v\n", err);
+    }
+    var items []Item
+
+    for _, e := range rss.Channel.Items {
+        items = append(items, Item{
+            Url:        e.GuId,
+            Title:     e.Title,
+            Updated: e.PubDate,
+            Content:   e.Description,
+			Read: false,
+        })
+    }
+    feed := Feed{
+        Url: rss.Channel.Link,
+        Title: rss.Channel.Title,
+        Description: rss.Channel.Description,
+        Items: items,
+    }
+
+    return feed, nil;
+}
+
