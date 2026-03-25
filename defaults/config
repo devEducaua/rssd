@@ -1,4 +1,0 @@
-method: tcp
-tcp-port: 5600
-#unix-path: /tmp/rssd.sock
-query-limit: 100
