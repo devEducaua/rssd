@@ -152,7 +152,7 @@ func getBaseDir() (string, error) {
 	//}
 	//path := filepath.Join(home, ".config", "rssd");
 
-	path := "./defaults";
+	path := "./config";
 
 	err := os.MkdirAll(path, 0755);
 	if err != nil {
