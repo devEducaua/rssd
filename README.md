@@ -2,7 +2,7 @@
 
 a rss daemon, similar to what [mpd](https://musicpd.org) is for music.
 
-*this is in early development.*
+*THIS IS IN EARLY DEVELOPMENT.*
 
 see [SPEC.md](./SPEC.md) for more information.
 
