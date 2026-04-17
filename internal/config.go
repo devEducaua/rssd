@@ -146,13 +146,11 @@ func parseFeedsFile() ([]FeedConfig, error) {
 }
 
 func getBaseDir() (string, error) {
-	//home, err := os.UserHomeDir();
-	//if err != nil {
-	//	return "", err;
-	//}
-	//path := filepath.Join(home, ".config", "rssd");
-
-	path := "./config";
+	home, err := os.UserHomeDir();
+	if err != nil {
+		return "", err;
+	}
+	path := filepath.Join(home, ".config", "rssd");
 
 	err := os.MkdirAll(path, 0755);
 	if err != nil {
