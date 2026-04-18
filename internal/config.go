@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"os"
@@ -20,7 +20,7 @@ type Config struct {
 	QueryLimit int64
 }
 
-func getConfig() (Config, error){
+func GetConfig() (Config, error){
 	config := Config{
 		Method: "unix",
 		UnixPath: "/tmp/rssd.sock",
@@ -152,7 +152,7 @@ func getBaseDir() (string, error) {
 	}
 	path := filepath.Join(home, ".config", "rssd");
 
-	err := os.MkdirAll(path, 0755);
+	err = os.MkdirAll(path, 0755);
 	if err != nil {
 		return "", err;
 	}

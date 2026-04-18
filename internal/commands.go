@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ type Response struct {
 	Response any `json:"response"`
 }
 
-func parseCommand(command string) Response {
+func ParseCommand(command string) Response {
 	parts := strings.Split(command, " ");
 
 	var r Response;
@@ -65,7 +65,7 @@ func getCommand(command []string) ([]ItemDB, error) {
 		return nil, fmt.Errorf("invalid syntax on the `GET` command: `GET` needs one argument");
 	}
 
-	config, err := getConfig();
+	config, err := GetConfig();
 	if err != nil {
 		return nil, err;
 	}
@@ -262,7 +262,7 @@ func findCommand(command []string) ([]int64, error) {
 		return nil, fmt.Errorf("invalid syntax on the `FIND` command: `FIND` only accepts two arguments");
 	}
 
-	config, err := getConfig();
+	config, err := GetConfig();
 	if err != nil {
 		return nil, err;
 	}

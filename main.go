@@ -7,38 +7,25 @@ import (
 	"io"
 	"net"
 	"os"
+
+	"rssd/internal"
 )
 
-type Feed struct {
-	Title string
-	Name string
-	Description string
-	Url string
-	Items []Item
-}
-
-type Item struct {
-	Title string
-	Updated string
-	Content string
-	Read bool
-	Url string
-}
 
 func main() {
-	config, err := getConfig();
+	config, err := internal.GetConfig();
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err);
 		os.Exit(1);
 	}
 
-	db, err := SqlConnect();
+	db, err := internal.SqlConnect();
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: on connecting to the database: %v\n", err);
 		os.Exit(1);
 	}
 
-	err = SqlCreateTablesIfNotExists(db);
+	err = internal.SqlCreateTablesIfNotExists(db);
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: on creating tables: %v\n", err);
 		os.Exit(1);
@@ -94,7 +81,7 @@ func handleConnection(conn net.Conn) {
 		return;
 	}
 
-	res := parseCommand(command);
+	res := internal.ParseCommand(command);
 
 	b, err := json.MarshalIndent(res, "", "    ");
 	if err != nil {
