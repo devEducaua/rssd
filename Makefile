@@ -1,13 +1,23 @@
 
-SRCS=$(wildcard *.go)
+TARGET = rssd
+TARGETDIR = bin
 
-all: rssd
+SRCS := $(wildcard *.go)
 
-rssd: $(SRCS)
-	go build -o $@ .
+PREFIX ?= /usr/local
+BINDIR = $(PREFIX)/bin
+CONFIGDIR = $(HOME)/.config/rssd
 
-client:
-	go build -o client ./client/main.go
+all: $(TARGET)
+
+$(TARGET): $(SRCS)
+	mkdir -p $(TARGETDIR)
+	go build -o $(TARGETDIR)/$@ .
+
+install:
+	cp ./examples/* $(CONFIGDIR)/
+	cp $(TARGETDIR)/$(TARGET) $(BINDIR)/
 
 clean:
-	rm rssd.db rssd
+	rm -rf rssd.db $(TARGETDIR)
+
