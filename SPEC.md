@@ -12,31 +12,40 @@ GET
 - argument: source
 - argument description: source can be ALL, READ, UNREAD, a item id or a feedname.
 - optional argument: limit
+- return: list of items
 
 READ
 - argument: id
 - description: marks the especified item as read.
+- return: string
 
 UNREAD
 - argument: id
 - description: marks the especified item as not read.
+- return: string
 
 DELETE
 - argument: id
 - description: deletes a feed and his items.
+- return: string
 
 UPDATE
 - description: query the feeds to update the database.
+- argument: source
+- argument description: source can be ALL or a feedname.
+- return: string
 
 FIND
 - description: find a item
 - arguments: text
 - argument description: a text that is on the attributes of the item.
 - optional argument: limit
+- return: list of id's
 
 OPEN
 - description: open the item in the default application 
 - arguments: id
+- return: string
 
 ## responses
 the responses are in json, and have the obrigatory status attribute.
