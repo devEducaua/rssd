@@ -81,6 +81,18 @@ func SqlGetFeed(db *sql.DB, url string) (FeedDB, error) {
     return f, nil;
 }
 
+func SqlGetFeedByName(db *sql.DB, name string) (FeedDB, error) {
+    row := db.QueryRow("SELECT id, title, custom_name, url, description FROM feeds WHERE custom_name=?", name);
+    var f FeedDB;
+    err := row.Scan(&f.Id, &f.Title, &f.Name, &f.Url, &f.Description);
+
+    if err != nil {
+        return FeedDB{}, err;
+    }
+    
+    return f, nil;
+}
+
 func SqlUpsertFeed(db *sql.DB, feed Feed) (int64, error) {
     _, err := db.Exec("INSERT INTO feeds (title, custom_name, description, url) VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET title=excluded.title, description=excluded.description, custom_name=excluded.custom_name", 
 		feed.Title, feed.Name, feed.Description, feed.Url);

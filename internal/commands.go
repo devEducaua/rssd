@@ -206,33 +206,60 @@ func updateOneFeed(db *sql.DB, name string, url string) (int, error) {
 	return inserted, nil;
 }
 
-func changeRead(stringId string, read bool) error {
-	id, err := strconv.ParseInt(stringId, 10, 64);
-	if err != nil {
-		return err;
-	}
-
+func changeRead(commands []string, read bool) error {
 	db, err := SqlConnect();
 	if err != nil {
 		return err;
 	}
 	defer db.Close();
 
-	err = SqlUpdateItemRead(db, id, read);
-	if err != nil {
-		return err;
+	switch commands[1] {
+	case "FEED":
+		// TODO: modify this to not need the config
+		config, err := GetConfig();
+		if err != nil {
+			return err;
+		}
+
+		var limit int64 = config.QueryLimit;
+		feedname := commands[2];
+
+		items, err := SqlGetItemsByName(db, feedname, limit);
+		if err != nil {
+			return err;
+		}
+
+		for _,it := range items {
+			err := SqlUpdateItemRead(db, it.Id, read);
+			if err != nil {
+				return err;
+			}
+		}
+		
+	case "ID":
+		id, err := strconv.ParseInt(commands[2], 10, 64);
+		if err != nil {
+			return fmt.Errorf("argument of the subcommand ID needs to be a integer");
+		}
+
+		err = SqlUpdateItemRead(db, id, read);
+		if err != nil {
+			return err;
+		}
+
+	default:
+		return fmt.Errorf("invalid subcommand: %v", commands[1]);
 	}
 
 	return nil;
 }
 
 func readCommand(command []string) error {
-	if len(command) != 2 {
-		return fmt.Errorf("invalid syntax on the `READ` command: `READ` only accepts one argument");
+	if len(command) != 3 {
+		return fmt.Errorf("invalid syntax on the `READ` command: needs 3 arguments, but found: %v", len(command));
 	}
 
-	arg := strings.TrimSpace(command[1]);
-	err := changeRead(arg, true);
+	err := changeRead(command, true);
 	if err != nil {
 		return err;
 	}
@@ -242,11 +269,10 @@ func readCommand(command []string) error {
 
 func unreadCommand(command []string) error {
 	if len(command) != 2 {
-		return fmt.Errorf("invalid syntax on the `UNREAD` command: `UNREAD` only accepts one argument");
+		return fmt.Errorf("invalid syntax on the `UNREAD` command: needs 3 arguments, but found: %v", len(command));
 	}
 
-	arg := strings.TrimSpace(command[1]);
-	err := changeRead(arg, false);
+	err := changeRead(command, false);
 	if err != nil {
 		return err;
 	}
@@ -255,8 +281,8 @@ func unreadCommand(command []string) error {
 }
 
 func deleteCommand(command []string) error {
-	if len(command) != 2 {
-		return fmt.Errorf("invalid syntax on the `DELETE` command: `DELETE` only accepts one argument");
+	if len(command) != 3 {
+		return fmt.Errorf("invalid syntax on the `DELETE` command: needs 3 argument, buf found %v", len(command));
 	}
 
 	db, err := SqlConnect();
@@ -265,12 +291,14 @@ func deleteCommand(command []string) error {
 	}
 	defer db.Close();
 
-	id, err := strconv.ParseInt(strings.TrimSpace(command[1]), 10, 64);
+	feedname := command[2];
+
+	feed, err := SqlGetFeedByName(db, feedname);
 	if err != nil {
 		return err;
 	}
 
-	err = SqlDeleteFeed(db, id);
+	err = SqlDeleteFeed(db, feed.Id);
 	if err != nil {
 		return err;
 	}
