@@ -336,13 +336,16 @@ func findCommand(command []string) ([]ItemDB, error) {
 }
 
 func openCommand(command []string) error {
-	if len(command) < 2 {
-		return fmt.Errorf("invalid syntax on the `OPEN` command: `OPEN` only accepts one arguments");
+	if len(command) < 3 {
+		return fmt.Errorf("invalid syntax on the `OPEN` command: needs 3 arguments, but found: %v", len(command));
 	}
 
-	arg := strings.TrimSpace(command[1]);
+	sub := command[1];
+	if sub != "ID" {
+		return fmt.Errorf("invalid subcommand: %v", sub);
+	}
 
-	id, err := strconv.ParseInt(arg, 10, 64);
+	id, err := strconv.ParseInt(command[2], 10, 64);
 	if err != nil {
 		return err;
 	}
@@ -369,6 +372,29 @@ func openCommand(command []string) error {
 }
 
 func addCommand(command []string) error {
+	if len(command) < 5 {
+		return fmt.Errorf("invalid syntax on the `OPEN` command: needs 3 arguments, but found: %v", len(command));
+	}
 
-	return fmt.Errorf("TODO: not implemented");
+	if command[1] != "FEED" {
+		return fmt.Errorf("invalid subcommand: %v", command[1]);
+	}
+
+	feedname := command[2];
+
+	if command[3] != "URL" {
+		return fmt.Errorf("invalid subcommand: %v", command[3]);
+	}
+
+	url := command[4];
+
+	feed := FeedConfig{Url: url, Name: feedname};
+
+	err := addFeedToFile(feed);
+	if err != nil {
+		return fmt.Errorf("failed to add feed: %v", err);
+	}
+
+	return nil;
 }
+

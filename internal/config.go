@@ -158,6 +158,29 @@ func parseFeedsFile() ([]FeedConfig, error) {
 	return feeds, nil;
 }
 
+func addFeedToFile(feed FeedConfig) error {
+	baseDir, err := getBaseDir();
+	if err != nil {
+		return err;
+	}
+
+	var path = filepath.Join(baseDir, "feeds");
+	
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644);
+	if err != nil {
+		return err;
+	}
+	defer f.Close();
+
+	line := fmt.Sprintf("%v %v\n", feed.Name, feed.Url);
+	_, err = f.WriteString(line);
+	if err != nil {
+		return err;
+	}
+
+	return nil;
+}
+
 func getBaseDir() (string, error) {
 	home, err := os.UserHomeDir();
 	if err != nil {
