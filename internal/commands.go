@@ -9,53 +9,52 @@ import (
 )
 
 type Response struct {
-	Status string `json:"status"`
-	Response any `json:"response"`
+	Ok bool `json:"ok"`
+	Data any `json:"data"`
+	Error error `json:"error"`
+}
+
+type UpdateDataResponse struct {
+	Updated int;
 }
 
 func ParseCommand(command string) Response {
 	parts := strings.Split(command, " ");
 
-	var r Response;
+	var r = Response{
+		Ok: true,
+		Data: nil,
+		Error: nil,
+	};
 
-	var msg string;
-	var items []ItemDB;
-	var findIds []int64;
-
+	var data any;
 	var err error;
-
-	r.Status = "yes"
 
 	switch parts[0] {
 		case "GET":
-			items, err = getCommand(parts);
-			r.Response = items;
+			data, err = getCommand(parts);
 		case "UPDATE":
-			msg, err = updateCommand(parts);
-			r.Response = msg;
+			data, err = updateCommand(parts);
 		case "READ":
-			msg, err = readCommand(parts);
-			r.Response = msg;	
+			data, err = readCommand(parts);
 		case "UNREAD":
-			msg, err = unreadCommand(parts);
-			r.Response = msg;	
+			data, err = unreadCommand(parts);
 		case "DELETE":
-			msg, err = deleteCommand(parts);
-			r.Response = msg;
+			data, err = deleteCommand(parts);
 		case "FIND":
-			findIds, err = findCommand(parts);
-			r.Response = findIds;
+			data, err = findCommand(parts);
 		case "OPEN":
-			msg, err = openCommand(parts);
-			r.Response = msg;
+			err = openCommand(parts);
+			data = nil;
 		default:
 			err = fmt.Errorf("command: %v doesn't exists", parts[0]);
 	}
-
 	if err != nil {
-		r.Status = "no";
-		r.Response = err.Error();
+		r.Ok = false;
+		r.Error = err;
 	}
+
+	r.Data = data;
 
 	return r;
 }
@@ -100,7 +99,6 @@ func getCommand(command []string) ([]ItemDB, error) {
 			items, err = SqlGetItemsByName(db, arg, limit);
 
 		} else {
-			// TODO: return just the item without array
 			var item ItemDB;
 			item, err = SqlGetItem(db, id);
 			items = []ItemDB{item};
@@ -114,14 +112,17 @@ func getCommand(command []string) ([]ItemDB, error) {
 	return items, nil;
 }
 
-func updateCommand(command []string) (string, error) {
+
+func updateCommand(command []string) (UpdateDataResponse, error) {
+	var data UpdateDataResponse;
+
 	if len(command) != 2 {
-		return "", fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
+		return data, fmt.Errorf("invalid syntax on the `UPDATE` command: `UPDATE` only accepts one argument");
 	}
 
 	db, err := SqlConnect();
 	if err != nil {
-		return "", err;
+		return data, err;
 	}
 	defer db.Close();
 
@@ -129,21 +130,20 @@ func updateCommand(command []string) (string, error) {
 
 	feeds, err := getFeedsConfig();
 	if err != nil {
-
-		return "", err;
+		return data, err;
 	}
+
+	var inserted int;
 
 	// do paralelization here
 	if arg == "ALL" {
 		for _,v := range feeds {
-			err := updateOneFeed(db, v.Name, v.Url);
+			inserted, err = updateOneFeed(db, v.Name, v.Url);
 			if err != nil {
-				return "", err;
+				return data, err;
 			}
 		}
 	} else {
-
-		// TODO: turn CONFIG.feeds on a hash map to better performance
 		var feedUrl string;
 		for _,v := range feeds {
 			if v.Name == arg {
@@ -152,37 +152,38 @@ func updateCommand(command []string) (string, error) {
 		}
 
 		if feedUrl == "" {
-			return "", fmt.Errorf("feeds name not found: `%v`", arg);
+			return data, fmt.Errorf("feeds name not found: `%v`", arg);
 		}
 
-		err = updateOneFeed(db, arg, feedUrl);
+		inserted, err = updateOneFeed(db, arg, feedUrl);
 		if err != nil {
-			return "", err;
+			return data, err;
 		}
 	}
+	data.Updated = inserted;
 
-	return "feeds are updated", nil;
+	return data, nil;
 }
 
-func updateOneFeed(db *sql.DB, name string, url string) error {
+func updateOneFeed(db *sql.DB, name string, url string) (int, error) {
 	feed, err := getFeedFromWeb(url);
 	if err != nil {
-		return err;
+		return 0, err;
 	}
 
 	feed.Name = name;
 
 	id, err := SqlUpsertFeed(db, feed);
 	if err != nil {
-		return err;
+		return 0, err;
 	}
 
-	err = SqlSaveFeedItems(db, feed.Items, id);
+	inserted, err := SqlSaveFeedItems(db, feed.Items, id);
 	if err != nil {
-		return err;
+		return 0, err;
 	}
 
-	return nil;
+	return inserted, nil;
 }
 
 func changeRead(stringId string, read bool) (int64, error) {
@@ -286,36 +287,36 @@ func findCommand(command []string) ([]int64, error) {
 	return ids, nil;
 }
 
-func openCommand(command []string) (string, error) {
+func openCommand(command []string) error {
 	if len(command) < 2 {
-		return "", fmt.Errorf("invalid syntax on the `OPEN` command: `OPEN` only accepts one arguments");
+		return fmt.Errorf("invalid syntax on the `OPEN` command: `OPEN` only accepts one arguments");
 	}
 
 	arg := strings.TrimSpace(command[1]);
 
 	id, err := strconv.ParseInt(arg, 10, 64);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
 	db, err := SqlConnect();
 	if err != nil {
-		return "", err;
+		return err;
 	}
 	defer db.Close();
 
 	item, err := SqlGetItem(db, id);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
 	cmd := exec.Command("xdg-open", item.Url);
 
 	err = cmd.Run();
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
-	return "external program finished", nil;
+	return nil;
 }
 

@@ -106,14 +106,25 @@ func SqlDeleteFeed(db *sql.DB, id int64) error {
     return nil;
 }
 
-func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) error {
+func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) (int, error) {
+	var inserted int;
+
     for _,it := range items {
-        _, err := db.Exec("INSERT OR IGNORE INTO items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
+        result, err := db.Exec("INSERT OR IGNORE INTO items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
         if err != nil {
-            return err;
+            return inserrted, err;
         }
+
+		affected, err := result.RowsAffected();
+		if err != nil {
+			return inserted, err;
+		}
+
+		if affected > 0 {
+			inserted++;
+		}
     }
-    return nil;
+    return inserted, nil;
 }
 
 func SqlGetItem(db *sql.DB, id int64) (ItemDB, error) {
