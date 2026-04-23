@@ -32,6 +32,9 @@ func main() {
 	}
 	db.Close();
 
+	// TODO: get from config
+	go internal.PeriodicReload(15*60);
+
 	var listener net.Listener;
 
 	if config.Method == "unix" {
@@ -89,6 +92,6 @@ func handleConnection(conn net.Conn) {
 		return;	
 	}
 
-	fmt.Fprintf(conn, string(b));
+	fmt.Fprint(conn, string(b));
 }
 
