@@ -18,6 +18,7 @@ type Config struct {
 	UnixPath string
 	TcpPort int
 	QueryLimit int64
+	ReloadTime int
 }
 
 func GetConfig() (Config, error){
@@ -25,6 +26,7 @@ func GetConfig() (Config, error){
 		Method: "unix",
 		UnixPath: "/tmp/rssd.sock",
 		QueryLimit: 100,
+		ReloadTime: 900,
 	}
 
 	configFile, err := parseConfigFile();
@@ -40,6 +42,10 @@ func GetConfig() (Config, error){
 
 	if configFile.QueryLimit != 0 {
 		config.QueryLimit = configFile.QueryLimit;
+	}
+
+	if configFile.ReloadTime != 0 {
+		config.ReloadTime = configFile.ReloadTime;
 	}
 
 	return config, nil;
@@ -97,6 +103,13 @@ func parseConfigFile() (Config, error) {
 					return Config{}, err;
 				}
 				c.QueryLimit = converted;
+
+			case "reload-time":
+				converted, err := strconv.Atoi(value);
+				if err != nil {
+					return Config{}, err;
+				}
+				c.ReloadTime = converted;
 
 			default:
 				return Config{}, fmt.Errorf("ERROR: unknown option: `%v`", key);

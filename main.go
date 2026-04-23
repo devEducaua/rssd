@@ -32,8 +32,7 @@ func main() {
 	}
 	db.Close();
 
-	// TODO: get from config
-	go internal.PeriodicReload(15*60);
+	go internal.PeriodicReload(config.ReloadTime);
 
 	var listener net.Listener;
 

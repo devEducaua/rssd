@@ -3,3 +3,4 @@ unix-path: /tmp/rssd.sock
 #method: tcp
 #tcp-port: 5600
 query-limit: 100
+reload-time: 900
