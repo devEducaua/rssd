@@ -145,31 +145,41 @@ func updateCommand(command []string) (UpdateDataResponse, error) {
 
 	var inserted int;
 
-	// do paralelization here
-	if arg == "ALL" {
+	switch arg {
+	case "ALL":
 		for _,v := range feeds {
 			inserted, err = updateOneFeed(db, v.Name, v.Url);
 			if err != nil {
 				return data, err;
 			}
 		}
-	} else {
+	case "FEED":
+		if len(command) < 3 {
+			return data, fmt.Errorf("subcommand FEED needs an argument");
+		}
+
+		feedname := command[2];
+
 		var feedUrl string;
 		for _,v := range feeds {
-			if v.Name == arg {
+			if v.Name == feedname {
 				feedUrl = v.Url;
 			}
 		}
 
 		if feedUrl == "" {
-			return data, fmt.Errorf("feeds name not found: `%v`", arg);
+			return data, fmt.Errorf("feeds name not found: `%v`", feedname);
 		}
 
 		inserted, err = updateOneFeed(db, arg, feedUrl);
 		if err != nil {
 			return data, err;
 		}
+	default:
+		err = fmt.Errorf("invalid subcommand: %v", arg);
+
 	}
+
 	data.Updated = inserted;
 
 	return data, nil;
