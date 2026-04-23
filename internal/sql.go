@@ -3,6 +3,7 @@ package internal
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
@@ -25,9 +26,15 @@ type FeedDB struct {
     Url string
 }
 
-func SqlConnect() (*sql.DB, error) { const DBPATH = "./rssd.db";
+func SqlConnect() (*sql.DB, error) { 
+	baseDir, err := getBaseDir();
+	if err != nil {
+		return nil, err;
+	}
 
-    db, err := sql.Open("sqlite", DBPATH);
+	var dbpath = filepath.Join(baseDir, "rssd.db");
+
+    db, err := sql.Open("sqlite", dbpath);
     if err != nil {
         return nil, err;
     }
