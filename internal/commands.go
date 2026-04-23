@@ -49,6 +49,9 @@ func ParseCommand(command string) Response {
 		case "OPEN":
 			err = openCommand(parts);
 			data = nil;
+		case "ADD":
+			err = addCommand(parts);
+			data = nil
 		default:
 			err = fmt.Errorf("command: %v doesn't exists", parts[0]);
 	}
@@ -94,18 +97,22 @@ func getCommand(command []string) ([]ItemDB, error) {
 		items, err = SqlGetItemsByRead(db, false, limit);
 	case "READ":
 		items, err = SqlGetItemsByRead(db, true, limit);
-	default:
-		id, err := strconv.ParseInt(arg, 10, 64);
-
-		// TODO: refactor this to 2 separate functions
-		if err != nil {
-			items, err = SqlGetItemsByName(db, arg, limit);
-
-		} else {
-			var item ItemDB;
-			item, err = SqlGetItem(db, id);
-			items = []ItemDB{item};
+	case "FEED":
+		items, err = SqlGetItemsByName(db, arg, limit);
+	case "ID":
+		if len(command) < 3 {
+			return nil, fmt.Errorf("subcommand ID needs an argument");
 		}
+		id, err := strconv.ParseInt(command[2], 10, 64);
+		if err != nil {
+			return nil, fmt.Errorf("argument of the subcommand ID needs to be a integer");
+		}
+
+		var item ItemDB;
+		item, err = SqlGetItem(db, id);
+		items = []ItemDB{item};
+	default:
+		err = fmt.Errorf("invalid subcommand: %v", arg);
 	}
 
 	if err != nil {
@@ -323,3 +330,7 @@ func openCommand(command []string) error {
 	return nil;
 }
 
+func addCommand(command []string) error {
+
+	return fmt.Errorf("TODO: not implemented");
+}
