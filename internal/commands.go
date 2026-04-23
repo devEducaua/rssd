@@ -36,11 +36,14 @@ func ParseCommand(command string) Response {
 		case "UPDATE":
 			data, err = updateCommand(parts);
 		case "READ":
-			data, err = readCommand(parts);
+			err = readCommand(parts);
+			data = nil;
 		case "UNREAD":
-			data, err = unreadCommand(parts);
+			err = unreadCommand(parts);
+			data = nil;
 		case "DELETE":
-			data, err = deleteCommand(parts);
+			err = deleteCommand(parts);
+			data = nil;
 		case "FIND":
 			data, err = findCommand(parts);
 		case "OPEN":
@@ -186,79 +189,79 @@ func updateOneFeed(db *sql.DB, name string, url string) (int, error) {
 	return inserted, nil;
 }
 
-func changeRead(stringId string, read bool) (int64, error) {
+func changeRead(stringId string, read bool) error {
 	id, err := strconv.ParseInt(stringId, 10, 64);
 	if err != nil {
-		return -1, err;
+		return err;
 	}
 
 	db, err := SqlConnect();
 	if err != nil {
-		return -1, err;
+		return err;
 	}
 	defer db.Close();
 
 	err = SqlUpdateItemRead(db, id, read);
 	if err != nil {
-		return -1, err;
+		return err;
 	}
 
-	return id, nil;
+	return nil;
 }
 
-func readCommand(command []string) (string, error) {
+func readCommand(command []string) error {
 	if len(command) != 2 {
-		return "", fmt.Errorf("invalid syntax on the `READ` command: `READ` only accepts one argument");
+		return fmt.Errorf("invalid syntax on the `READ` command: `READ` only accepts one argument");
 	}
 
 	arg := strings.TrimSpace(command[1]);
-	id, err := changeRead(arg, true);
+	err := changeRead(arg, true);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
-	return fmt.Sprintf("item with id: %v is read", id), nil;
+	return nil;
 }
 
-func unreadCommand(command []string) (string, error) {
+func unreadCommand(command []string) error {
 	if len(command) != 2 {
-		return "", fmt.Errorf("invalid syntax on the `UNREAD` command: `UNREAD` only accepts one argument");
+		return fmt.Errorf("invalid syntax on the `UNREAD` command: `UNREAD` only accepts one argument");
 	}
 
 	arg := strings.TrimSpace(command[1]);
-	id, err := changeRead(arg, false);
+	err := changeRead(arg, false);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
-	return fmt.Sprintf("item with id: %v is unread", id), nil;
+	return nil;
 }
 
-func deleteCommand(command []string) (string, error) {
+func deleteCommand(command []string) error {
 	if len(command) != 2 {
-		return "", fmt.Errorf("invalid syntax on the `DELETE` command: `DELETE` only accepts one argument");
+		return fmt.Errorf("invalid syntax on the `DELETE` command: `DELETE` only accepts one argument");
 	}
 
 	db, err := SqlConnect();
 	if err != nil {
-		return "", err;
+		return err;
 	}
 	defer db.Close();
 
 	id, err := strconv.ParseInt(strings.TrimSpace(command[1]), 10, 64);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
 	err = SqlDeleteFeed(db, id);
 	if err != nil {
-		return "", err;
+		return err;
 	}
 
-	return fmt.Sprintf("feed with id: %v deleted", id), nil;
+	return nil;
 }
 
-func findCommand(command []string) ([]int64, error) {
+func findCommand(command []string) ([]ItemDB, error) {
 	if len(command) > 3 || len(command) < 2 {
 		return nil, fmt.Errorf("invalid syntax on the `FIND` command: `FIND` only accepts two arguments");
 	}
@@ -279,12 +282,12 @@ func findCommand(command []string) ([]int64, error) {
 	}
 	defer db.Close();
 
-	ids, err := SqlSearchItem(db, strings.TrimSpace(command[1]), limit);
+	items, err := SqlSearchItem(db, strings.TrimSpace(command[1]), limit);
 	if err != nil {
 		return nil, err;
 	}
 
-	return ids, nil;
+	return items, nil;
 }
 
 func openCommand(command []string) error {

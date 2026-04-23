@@ -112,7 +112,7 @@ func SqlSaveFeedItems(db *sql.DB, items []Item, feedId int64) (int, error) {
     for _,it := range items {
         result, err := db.Exec("INSERT OR IGNORE INTO items (title, updated, content, read, url, feed_id) VALUES (?, ?, ?, ?, ?, ?)", it.Title, it.Updated, it.Content, it.Read, it.Url, feedId);
         if err != nil {
-            return inserrted, err;
+            return inserted, err;
         }
 
 		affected, err := result.RowsAffected();
@@ -196,27 +196,27 @@ func SqlGetItemsByRead(db *sql.DB, read bool, limit int64) ([]ItemDB, error) {
     return items, nil;
 }
 
-func SqlSearchItem(db *sql.DB, text string, limit int64) ([]int64, error) {
+func SqlSearchItem(db *sql.DB, text string, limit int64) ([]ItemDB, error) {
     text = "%" + text + "%";
-    rows, err := db.Query("SELECT id FROM items WHERE title LIKE ? OR url LIKE ? OR content LIKE ? LIMIT ?", text, text, text, limit);
+    rows, err := db.Query("SELECT id, url, title, updated, content, read, feed_id FROM items WHERE title LIKE ? OR url LIKE ? OR content LIKE ? LIMIT ?", text, text, text, limit);
     if err != nil {
         return nil, err;
     }
 
-    var ids []int64;
+	var items []ItemDB;
     for rows.Next() {
-        var id int64;
-        if err := rows.Scan(&id); err != nil {
+		var item ItemDB
+        if err := rows.Scan(&item.Id, &item.Title, &item.Updated, &item.Content, &item.Read, &item.FeedId); err != nil {
             return nil, err;    
         }
-        ids = append(ids, id);
+        items = append(items, item);
     }
 
     if err := rows.Err(); err != nil {
         return nil, err;
     }
 
-    return ids, nil;
+    return items, nil;
 }
 
 func SqlUpdateItemRead(db *sql.DB, id int64, read bool) error {
